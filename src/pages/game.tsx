@@ -4,6 +4,7 @@ import { useGameStore } from '../store/gameStore';
 import { useCharacterStore } from '../store/characterStore';
 import { GameEngine } from '../game/core/GameEngine';
 import InGameCharacterCreation from '../components/game/InGameCharacterCreation';
+import Inventory from '../components/game/Inventory';
 import { CharacterCreationData } from '@types/character';
 
 const GamePage: React.FC = () => {
@@ -12,6 +13,7 @@ const GamePage: React.FC = () => {
   const { setPlayer, setConnected, setEntities } = useGameStore();
   const { getSelectedCharacter, createCharacter } = useCharacterStore();
   const [showCharacterCreation, setShowCharacterCreation] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -92,6 +94,22 @@ const GamePage: React.FC = () => {
         }
       }
     }
+    
+    // Press 'I' to toggle inventory
+    if (e.key === 'i' || e.key === 'I') {
+      if (engineRef.current) {
+        const localPlayer = engineRef.current.getLocalPlayer();
+        if (localPlayer && !localPlayer.isFormless) {
+          setShowInventory((prev) => !prev);
+        }
+      }
+    }
+    
+    // Press 'Escape' to close inventory
+    if (e.key === 'Escape') {
+      setShowInventory(false);
+      setShowCharacterCreation(false);
+    }
   };
 
   useEffect(() => {
@@ -118,6 +136,7 @@ const GamePage: React.FC = () => {
           onClose={() => setShowCharacterCreation(false)}
         />
       )}
+      <Inventory isOpen={showInventory} onClose={() => setShowInventory(false)} />
       {engineRef.current?.getLocalPlayer()?.isFormless && !showCharacterCreation && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 bg-game-panel border-2 border-game-border rounded-lg p-3 shadow-2xl">
           <div className="text-game-text text-sm text-center">

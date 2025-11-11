@@ -15,10 +15,11 @@ const GameUI: React.FC = () => {
         <div className="bg-game-panel border-2 border-game-border rounded-lg p-3 shadow-2xl max-w-xs">
           <div className="text-game-text text-xs space-y-1">
             <div><strong>WASD</strong> - Move</div>
-            <div><strong>Mouse</strong> - Look/Attack</div>
+            <div><strong>Mouse Click</strong> - Attack</div>
             <div><strong>Enter</strong> - Chat</div>
             <div><strong>I</strong> - Inventory</div>
             <div><strong>M</strong> - Map</div>
+            <div><strong>ESC</strong> - Close menus</div>
           </div>
         </div>
       </div>
