@@ -4,7 +4,7 @@ import { TileData } from '@types/game';
 export const GAME_CONFIG = {
   TILE_SIZE: 1,
   PLAYER_SIZE: 0.8,
-  PLAYER_SPEED: 5,
+  PLAYER_SPEED: 3, // Reduced for better control
   ENEMY_SIZE: 0.9,
   NPC_SIZE: 0.9,
   CAMERA_HEIGHT: 20,

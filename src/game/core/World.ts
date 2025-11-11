@@ -171,17 +171,52 @@ export class World {
       tiles.push(row);
     }
 
-    // Add some walls randomly
+    // Add some walls randomly (but avoid center area for spawn points)
     for (let i = 0; i < 20; i++) {
       const x = Math.floor(Math.random() * (size.x - 4)) + 2;
       const y = Math.floor(Math.random() * (size.y - 4)) + 2;
-      tiles[y][x] = 4;
+      
+      // Don't place walls near spawn points
+      const centerX = size.x / 2;
+      const centerY = size.y / 2;
+      const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+      
+      if (distFromCenter > 10) {
+        tiles[y][x] = 4;
+      }
     }
 
+    // Find walkable spawn points
+    const findWalkableSpawn = (targetX: number, targetY: number): Vector2 => {
+      // Try the target position first
+      if (tiles[Math.floor(targetY)][Math.floor(targetX)] !== 4 && 
+          tiles[Math.floor(targetY)][Math.floor(targetX)] !== 3) {
+        return { x: targetX, y: targetY };
+      }
+      
+      // Search in a spiral pattern for a walkable tile
+      for (let radius = 1; radius < 20; radius++) {
+        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+          const x = Math.floor(targetX + Math.cos(angle) * radius);
+          const y = Math.floor(targetY + Math.sin(angle) * radius);
+          
+          if (x >= 1 && x < size.x - 1 && y >= 1 && y < size.y - 1) {
+            const tileId = tiles[y][x];
+            if (tileId !== 4 && tileId !== 3) { // Not wall or water
+              return { x: x + 0.5, y: y + 0.5 }; // Center of tile
+            }
+          }
+        }
+      }
+      
+      // Fallback to a safe position
+      return { x: 10, y: 10 };
+    };
+
     const spawnPoints: Vector2[] = [
-      { x: size.x / 2, y: size.y / 2 },
-      { x: size.x / 4, y: size.y / 4 },
-      { x: (size.x * 3) / 4, y: (size.y * 3) / 4 },
+      findWalkableSpawn(size.x / 2, size.y / 2),
+      findWalkableSpawn(size.x / 4, size.y / 4),
+      findWalkableSpawn((size.x * 3) / 4, (size.y * 3) / 4),
     ];
 
     return {

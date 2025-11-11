@@ -12,16 +12,20 @@ export class MovementSystem {
   updateEntity(entity: Entity, deltaTime: number): void {
     if (entity.velocity.x === 0 && entity.velocity.y === 0) return;
 
+    const oldPosition = { ...entity.position };
     const newPosition: Vector2 = {
       x: entity.position.x + entity.velocity.x * deltaTime,
       y: entity.position.y + entity.velocity.y * deltaTime,
     };
 
     // Resolve collision and update position
-    entity.position = this.collisionSystem.resolveCollision(entity, newPosition);
+    const resolvedPosition = this.collisionSystem.resolveCollision(entity, newPosition);
+    const actuallyMoved = resolvedPosition.x !== oldPosition.x || resolvedPosition.y !== oldPosition.y;
+    
+    entity.position = resolvedPosition;
 
-    // Update rotation based on velocity
-    if (entity.velocity.x !== 0 || entity.velocity.y !== 0) {
+    // Only update rotation if we actually moved
+    if (actuallyMoved && (entity.velocity.x !== 0 || entity.velocity.y !== 0)) {
       entity.rotation = Math.atan2(entity.velocity.y, entity.velocity.x);
     }
   }
