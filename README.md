@@ -2,10 +2,13 @@
 
 A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. Inspired by Diablo II and EverQuest, featuring real-time multiplayer gameplay, persistent worlds, and scalable architecture.
 
-![Topdown Adventure](https://img.shields.io/badge/Status-In%20Development-yellow)
+![Topdown Adventure](https://img.shields.io/badge/Status-Live%20%26%20Deployed-green)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
 ![Three.js](https://img.shields.io/badge/Three.js-0.159-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)
+![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black)
+
+**🌐 Live Game:** [Play Now](https://tdadventure.vercel.app) | [GitHub](https://github.com/mrmetaverse/tdadventure)
 
 ## 🎮 Features
 
@@ -31,9 +34,33 @@ A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. I
 - **Zustand** for state management
 - **TailwindCSS** for UI styling
 
+## 🚀 Deployment Status
+
+### ✅ Frontend - DEPLOYED
+- **Status:** Live and publicly accessible
+- **URL:** https://tdadventure.vercel.app
+- **Platform:** Vercel
+- **Build:** ✅ Passing
+- **Last Deployed:** Successfully deployed with all TypeScript errors resolved
+
+### ⏳ WebSocket Server - Pending
+- **Status:** Ready to deploy (server code complete)
+- **Recommended:** Railway, Render, or Fly.io
+- **Next Steps:** See [DEPLOYMENT.md](./DEPLOYMENT.md) or [QUICK_DEPLOY.md](./QUICK_DEPLOY.md)
+
+### 🔧 Environment Variables Needed
+Once WebSocket server is deployed, add to Vercel:
+- `NEXT_PUBLIC_WS_URL` - Your WebSocket server URL (e.g., `wss://your-server.railway.app`)
+- `REPLICATE_API_KEY` - Optional, for AI sprite generation
+
 ## 🚀 Quick Start
 
-### Deploy to Vercel (Recommended)
+### Play the Live Game
+Visit: **https://tdadventure.vercel.app**
+
+### Deploy to Vercel (Already Done!)
+
+The frontend is already deployed. To redeploy or update:
 
 1. **Install Vercel CLI:**
 ```bash
@@ -44,7 +71,7 @@ npm i -g vercel
 ```bash
 cd tdadventure
 vercel login
-vercel
+vercel --prod
 ```
 
 3. **Set Environment Variables in Vercel Dashboard:**
@@ -142,6 +169,40 @@ Sprites are automatically regenerated when you equip new items. For example, equ
 **Without API Key:**
 The game will use placeholder sprites (colored squares) that still function correctly.
 
+## 📊 Current Progress
+
+### ✅ Completed Features
+- [x] Next.js + Three.js game engine setup
+- [x] Top-down 2D rendering with orthographic camera
+- [x] Player movement system (WASD controls)
+- [x] Collision detection and world boundaries
+- [x] Character creation system (5 classes, 3 races, 9 divines)
+- [x] 9-node alignment system (Lawful/Neutral/Chaotic × Good/Neutral/Evil)
+- [x] Formless player state (join as ball of light, create character in-game)
+- [x] Inventory system with drag-and-drop
+- [x] Equipment system with stat bonuses
+- [x] Combat system (attack with mouse click)
+- [x] Experience and leveling system
+- [x] AI sprite generation integration (Replicate API)
+- [x] Dynamic sprite regeneration on equipment change
+- [x] HUD (health, mana, XP bars)
+- [x] Minimap
+- [x] WebSocket client for multiplayer
+- [x] WebSocket server code (ready to deploy)
+- [x] Vercel deployment configuration
+- [x] TypeScript build fixes
+- [x] Production deployment
+
+### 🚧 In Progress / Next Steps
+- [ ] Deploy WebSocket server (Railway/Render/Fly.io)
+- [ ] Multiplayer synchronization testing
+- [ ] NPC interaction system
+- [ ] Quest system
+- [ ] Item crafting
+- [ ] Party/guild system
+- [ ] PvP arenas
+- [ ] Persistent world data storage
+
 ## 📝 License
 
 MIT License - see LICENSE file for details.
@@ -154,5 +215,7 @@ MIT License - see LICENSE file for details.
 - Deployed on [Vercel](https://vercel.com/)
 
 ---
+
+**🎮 Play Now:** https://tdadventure.vercel.app
 
 **Happy Adventuring!** 🎮⚔️🛡️
