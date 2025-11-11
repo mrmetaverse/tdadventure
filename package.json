@@ -1,0 +1,46 @@
+{
+  "name": "tdadventure",
+  "version": "1.0.0",
+  "description": "A top-down 2D MMORPG built with Three.js and Next.js - Diablo II meets Everquest in browser",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.159.0",
+    "ws": "^8.14.2",
+    "uuid": "^9.0.1",
+    "zustand": "^4.4.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.42",
+    "@types/react-dom": "^18.2.17",
+    "@types/three": "^0.159.0",
+    "@types/ws": "^8.5.9",
+    "@types/uuid": "^9.0.7",
+    "typescript": "^5.3.2",
+    "eslint": "^8.54.0",
+    "eslint-config-next": "^14.0.0",
+    "tailwindcss": "^3.3.5",
+    "postcss": "^8.4.31",
+    "autoprefixer": "^10.4.16"
+  },
+  "keywords": [
+    "mmorpg",
+    "game",
+    "three.js",
+    "next.js",
+    "multiplayer",
+    "top-down",
+    "2d"
+  ],
+  "author": "Jesse Alton",
+  "license": "MIT"
+}

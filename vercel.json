@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/pages/index.tsx",
+      "use": "@vercel/next"
+    },
+    {
+      "src": "src/pages/game.tsx",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/game/state",
+      "dest": "/src/pages/api/game/state.ts"
+    }
+  ]
+}
