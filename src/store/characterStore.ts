@@ -34,9 +34,32 @@ const saveToStorage = (characters: CharacterData[]) => {
   }
 };
 
+// Load selected character ID from storage
+const loadSelectedId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem('tdadventure-selected-character') || null;
+  } catch {
+    return null;
+  }
+};
+
+const saveSelectedId = (id: string | null) => {
+  if (typeof window === 'undefined') return;
+  try {
+    if (id) {
+      localStorage.setItem('tdadventure-selected-character', id);
+    } else {
+      localStorage.removeItem('tdadventure-selected-character');
+    }
+  } catch {
+    // Ignore storage errors
+  }
+};
+
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
       characters: loadFromStorage(),
-      selectedCharacterId: null,
+      selectedCharacterId: loadSelectedId(),
 
       createCharacter: (data) => {
         const newCharacter: CharacterData = {
@@ -69,9 +92,16 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         set((state) => {
           const newCharacters = state.characters.filter((c) => c.id !== id);
           saveToStorage(newCharacters);
+          if (state.selectedCharacterId === id) {
+            saveSelectedId(null);
+            return {
+              characters: newCharacters,
+              selectedCharacterId: null,
+            };
+          }
           return {
             characters: newCharacters,
-            selectedCharacterId: state.selectedCharacterId === id ? null : state.selectedCharacterId,
+            selectedCharacterId: state.selectedCharacterId,
           };
         });
       },
