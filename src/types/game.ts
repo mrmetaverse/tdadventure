@@ -5,7 +5,7 @@ export interface Vector2 {
   y: number;
 }
 
-export type EntityType = 'player' | 'npc' | 'enemy' | 'item' | 'projectile';
+export type EntityType = 'player' | 'npc' | 'enemy' | 'item' | 'projectile' | 'dropped_item';
 
 export interface Entity {
   id: string;
@@ -13,10 +13,10 @@ export interface Entity {
   position: Vector2;
   velocity: Vector2;
   rotation: number;
-  health: number;
-  maxHealth: number;
+  health?: number;
+  maxHealth?: number;
   mesh?: THREE.Mesh | THREE.Group;
-  speed: number;
+  speed?: number;
   size: number;
 }
 

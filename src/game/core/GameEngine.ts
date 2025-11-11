@@ -8,6 +8,8 @@ import { CollisionSystem } from '../systems/CollisionSystem';
 import { Player as PlayerEntity } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { NPC } from '../entities/NPC';
+import { DroppedItem } from '../entities/DroppedItem';
+import { ItemGenerator } from '../items/ItemGenerator';
 import { GAME_CONFIG } from '../utils/Constants';
 import { NetworkClient } from '../network/NetworkClient';
 import { AlignmentSystem } from '../utils/Alignment';
@@ -147,22 +149,38 @@ export class GameEngine {
     if (entity.mesh) {
       this.sceneManager.addToScene(entity.mesh);
     }
+    
+    // Special handling for dropped items
+    if (entity.type === 'dropped_item') {
+      const droppedItem = entity as DroppedItem;
+      if (droppedItem.mesh) {
+        this.sceneManager.addToScene(droppedItem.mesh);
+      }
+    }
   }
 
   private removeEntity(entityId: string): void {
     const entity = this.entities.get(entityId);
-    if (entity && entity.mesh) {
-      this.sceneManager.removeFromScene(entity.mesh);
-      entity.mesh.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          if (Array.isArray(child.material)) {
-            child.material.forEach((mat) => mat.dispose());
-          } else {
-            child.material.dispose();
+    if (entity) {
+      if (entity.mesh) {
+        this.sceneManager.removeFromScene(entity.mesh);
+        entity.mesh.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach((mat) => mat.dispose());
+            } else {
+              child.material.dispose();
+            }
           }
-        }
-      });
+        });
+      }
+      
+      // Special handling for dropped items
+      if (entity.type === 'dropped_item') {
+        const droppedItem = entity as DroppedItem;
+        droppedItem.dispose();
+      }
     }
 
     this.entities.delete(entityId);
@@ -257,6 +275,12 @@ export class GameEngine {
       } else if (entity.type === 'npc') {
         const npc = entity as NPC;
         npc.update(deltaTime);
+      } else if (entity.type === 'dropped_item') {
+        const droppedItem = entity as DroppedItem;
+        droppedItem.update(deltaTime);
+        if (droppedItem.mesh) {
+          droppedItem.mesh.position.set(droppedItem.position.x, 0, droppedItem.position.y);
+        }
       } else if (entity.type === 'player') {
         const player = entity as Player;
         if (!player.isLocal) {
@@ -282,12 +306,14 @@ export class GameEngine {
       }
     }
     
-    // Clean up dead enemies
+    // Clean up dead enemies and drop items
     const deadEntities: string[] = [];
     this.entities.forEach((entity) => {
       if (entity.type === 'enemy') {
         const enemy = entity as Enemy;
         if (enemy.isDead && enemy.isDead()) {
+          // Drop item before removing enemy
+          this.dropItemFromEnemy(enemy);
           deadEntities.push(entity.id);
         }
       }
@@ -296,6 +322,9 @@ export class GameEngine {
     deadEntities.forEach((id) => {
       this.removeEntity(id);
     });
+
+    // Update dropped items and check for pickup
+    this.updateDroppedItems(deltaTime);
   }
 
   private render(): void {
@@ -305,6 +334,73 @@ export class GameEngine {
   private handleNetworkUpdate(data: any): void {
     // Handle remote player updates from network
     // This would create/update remote player entities
+  }
+
+  /**
+   * Drop an item from a killed enemy
+   */
+  private dropItemFromEnemy(enemy: Enemy): void {
+    const droppedItem = ItemGenerator.generateItem(enemy.level);
+    
+    if (droppedItem) {
+      // Add slight random offset from enemy position
+      const offsetX = (Math.random() - 0.5) * 0.5;
+      const offsetY = (Math.random() - 0.5) * 0.5;
+      
+      const dropPosition: Vector2 = {
+        x: enemy.position.x + offsetX,
+        y: enemy.position.y + offsetY,
+      };
+
+      const itemEntity = new DroppedItem(droppedItem, dropPosition);
+      this.addEntity(itemEntity);
+    }
+  }
+
+  /**
+   * Update dropped items and handle pickup
+   */
+  private updateDroppedItems(deltaTime: number): void {
+    const itemsToRemove: string[] = [];
+
+    this.entities.forEach((entity) => {
+      if (entity.type === 'dropped_item') {
+        const droppedItem = entity as DroppedItem;
+        
+        // Update item animation
+        droppedItem.update(deltaTime);
+
+        // Check if player can pickup
+        if (this.localPlayer && droppedItem.canPickup(this.localPlayer.position)) {
+          this.pickupItem(droppedItem);
+          itemsToRemove.push(droppedItem.id);
+        }
+
+        // Check if item should despawn
+        if (droppedItem.shouldDespawn()) {
+          itemsToRemove.push(droppedItem.id);
+        }
+      }
+    });
+
+    // Remove picked up or despawned items
+    itemsToRemove.forEach((id) => {
+      this.removeEntity(id);
+    });
+  }
+
+  /**
+   * Pick up a dropped item
+   */
+  private pickupItem(droppedItem: DroppedItem): void {
+    if (!this.localPlayer || this.localPlayer.isFormless) {
+      return;
+    }
+
+    // Add item to inventory
+    this.localPlayer.addItem(droppedItem.item);
+    
+    console.log(`Picked up: ${droppedItem.item.name} (${droppedItem.item.rarity})`);
   }
 
   private explorationSyncInterval: NodeJS.Timeout | null = null;

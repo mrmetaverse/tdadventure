@@ -9,7 +9,7 @@ const PlayerHUD: React.FC = () => {
   const [xpPercent, setXpPercent] = useState(0);
 
   useEffect(() => {
-    if (player) {
+    if (player && player.health !== undefined && player.maxHealth !== undefined) {
       setHealthPercent((player.health / player.maxHealth) * 100);
       setManaPercent((player.mana / player.maxMana) * 100);
       setXpPercent((player.experience / player.experienceToLevel) * 100);
@@ -50,7 +50,7 @@ const PlayerHUD: React.FC = () => {
         <div className="mb-2">
           <div className="flex justify-between text-xs text-game-text mb-1">
             <span>HP</span>
-            <span>{Math.ceil(player.health)} / {player.maxHealth}</span>
+            <span>{player.health !== undefined && player.maxHealth !== undefined ? `${Math.ceil(player.health)} / ${player.maxHealth}` : 'N/A'}</span>
           </div>
           <div className="w-full h-4 bg-game-bg rounded-full overflow-hidden border border-game-border">
             <div
@@ -64,7 +64,7 @@ const PlayerHUD: React.FC = () => {
         <div className="mb-2">
           <div className="flex justify-between text-xs text-game-text mb-1">
             <span>MP</span>
-            <span>{Math.ceil(player.mana)} / {player.maxMana}</span>
+            <span>{player.mana !== undefined && player.maxMana !== undefined ? `${Math.ceil(player.mana)} / ${player.maxMana}` : 'N/A'}</span>
           </div>
           <div className="w-full h-4 bg-game-bg rounded-full overflow-hidden border border-game-border">
             <div
