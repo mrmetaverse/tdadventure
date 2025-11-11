@@ -189,6 +189,11 @@ export class GameEngine {
       this.animationFrameId = null;
     }
 
+    if (this.explorationSyncInterval) {
+      clearInterval(this.explorationSyncInterval);
+      this.explorationSyncInterval = null;
+    }
+
     this.networkClient.disconnect();
     console.log('Game Engine Stopped');
   }
