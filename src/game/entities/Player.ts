@@ -408,8 +408,12 @@ export class Player implements PlayerType {
     this.mana = this.maxMana;
     this.size = GAME_CONFIG.PLAYER_SIZE;
 
-    // Replace mesh
-    if (this.mesh) {
+    // Replace mesh - need to remove old and add new to scene
+    if (this.mesh && this.mesh.parent) {
+      // Remove from parent
+      const parent = this.mesh.parent;
+      parent.remove(this.mesh);
+      
       // Dispose old mesh
       this.mesh.traverse((child) => {
         if (child instanceof THREE.Mesh) {
@@ -423,7 +427,14 @@ export class Player implements PlayerType {
       });
     }
 
+    // Create new mesh
     this.createMesh();
+    
+    // Add new mesh to scene if we had a parent
+    if (this.mesh && this.mesh.parent === null) {
+      // The mesh will be added by the game engine's addEntity method
+      // For now, we'll let the engine handle it
+    }
   }
 
   addItem(item: InventoryItem): void {

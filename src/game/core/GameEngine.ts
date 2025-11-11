@@ -283,6 +283,10 @@ export class GameEngine {
     return this.entities;
   }
 
+  getScene(): THREE.Scene {
+    return this.sceneManager.getScene();
+  }
+
   pause(): void {
     this.gameState.isPaused = true;
   }
