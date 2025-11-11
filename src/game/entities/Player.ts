@@ -36,6 +36,10 @@ export class Player implements PlayerType {
   divine?: Divine;
   alignment?: Alignment;
   isFormless: boolean = false;
+  
+  // Combat
+  attackCooldown: number = 0;
+  attackRange: number = 1.5;
 
   constructor(
     name: string,
@@ -243,6 +247,11 @@ export class Player implements PlayerType {
   }
 
   update(deltaTime: number): void {
+    // Update attack cooldown
+    if (this.attackCooldown > 0) {
+      this.attackCooldown = Math.max(0, this.attackCooldown - deltaTime);
+    }
+    
     if (this.mesh) {
       // Update position
       this.mesh.position.set(this.position.x, 0, this.position.y);
@@ -274,6 +283,54 @@ export class Player implements PlayerType {
         }
       }
     }
+  }
+
+  attack(target: Vector2, entities: Map<string, Entity>): boolean {
+    if (this.isFormless || this.attackCooldown > 0) return false;
+    
+    // Calculate direction to target
+    const dx = target.x - this.position.x;
+    const dy = target.y - this.position.y;
+    
+    // Update rotation to face attack direction
+    this.rotation = Math.atan2(dy, dx);
+    
+    // Check for enemies in attack range
+    let hit = false;
+    entities.forEach((entity) => {
+      if (entity.type === 'enemy' && entity.id !== this.id) {
+        const entityDx = entity.position.x - this.position.x;
+        const entityDy = entity.position.y - this.position.y;
+        const entityDistance = Math.sqrt(entityDx * entityDx + entityDy * entityDy);
+        
+        if (entityDistance <= this.attackRange) {
+          // Deal damage - import Enemy type properly
+          const enemy = entity as any; // Enemy type
+          const damage = this.stats.attackDamage;
+          
+          // Check for critical hit
+          const isCrit = Math.random() < this.stats.critChance;
+          const finalDamage = isCrit ? damage * this.stats.critDamage : damage;
+          
+          if (enemy.takeDamage) {
+            enemy.takeDamage(finalDamage);
+            hit = true;
+            
+            // Gain experience if enemy dies
+            if (enemy.isDead && enemy.isDead() && enemy.experienceReward) {
+              this.gainExperience(enemy.experienceReward);
+            }
+          }
+        }
+      }
+    });
+    
+    if (hit) {
+      this.attackCooldown = 0.5; // 0.5 second attack cooldown
+      return true;
+    }
+    
+    return false;
   }
 
   takeDamage(amount: number): void {

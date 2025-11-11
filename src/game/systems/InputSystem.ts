@@ -138,8 +138,9 @@ export class InputSystem {
   getMovementVector(): Vector2 {
     const movement: Vector2 = { x: 0, y: 0 };
 
-    if (this.inputState.forward) movement.y += 1;
-    if (this.inputState.backward) movement.y -= 1;
+    // Fixed: W (forward) should move up (negative y), S (backward) should move down (positive y)
+    if (this.inputState.forward) movement.y -= 1;
+    if (this.inputState.backward) movement.y += 1;
     if (this.inputState.left) movement.x -= 1;
     if (this.inputState.right) movement.x += 1;
 

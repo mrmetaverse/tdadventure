@@ -247,19 +247,33 @@ export class GameEngine {
       }
     });
 
-    // Handle interactions
-    if (inputState.mouseDown && this.localPlayer) {
-      // Attack or interact
+    // Handle attack
+    if (inputState.mouseDown && this.localPlayer && !this.localPlayer.isFormless) {
       const mouseWorld = this.sceneManager.getScreenToWorld(
         inputState.mousePosition.x,
         inputState.mousePosition.y
       );
 
       if (mouseWorld) {
-        const targetPos: Vector2 = { x: mouseWorld.x, z: mouseWorld.z };
-        // Could trigger attack or movement here
+        const targetPos: Vector2 = { x: mouseWorld.x, y: mouseWorld.z };
+        this.localPlayer.attack(targetPos, this.entities);
       }
     }
+    
+    // Clean up dead enemies
+    const deadEntities: string[] = [];
+    this.entities.forEach((entity) => {
+      if (entity.type === 'enemy') {
+        const enemy = entity as Enemy;
+        if (enemy.isDead && enemy.isDead()) {
+          deadEntities.push(entity.id);
+        }
+      }
+    });
+    
+    deadEntities.forEach((id) => {
+      this.removeEntity(id);
+    });
   }
 
   private render(): void {
