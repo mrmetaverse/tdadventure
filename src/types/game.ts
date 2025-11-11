@@ -105,7 +105,7 @@ export interface GameState {
 
 export interface TileData {
   id: number;
-  type: 'grass' | 'dirt' | 'stone' | 'water' | 'wall';
+  type: 'grass' | 'dirt' | 'stone' | 'water' | 'wall' | 'unexplored';
   walkable: boolean;
   color: string;
 }

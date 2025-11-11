@@ -9,9 +9,11 @@ export const GAME_CONFIG = {
   NPC_SIZE: 0.9,
   CAMERA_HEIGHT: 20,
   CAMERA_FOV: 75,
-  WORLD_SIZE: { x: 100, y: 100 },
+  WORLD_SIZE: { x: 1000, y: 1000 }, // Initial 1000x1000 area at origin
   CHUNK_SIZE: 20,
   RENDER_DISTANCE: 3, // chunks
+  EXPLORATION_RADIUS: 1, // chunks around player to mark as explored
+  INITIAL_WORLD_SIZE: 1000, // 1000x1000 initial area
   TARGET_FPS: 60,
   NETWORK_UPDATE_RATE: 20, // updates per second
 };
@@ -23,6 +25,7 @@ export const TILE_TYPES: Record<number, TileData> = {
   2: { id: 2, type: 'stone', walkable: true, color: '#6b7280' },
   3: { id: 3, type: 'water', walkable: false, color: '#3b82f6' },
   4: { id: 4, type: 'wall', walkable: false, color: '#374151' },
+  5: { id: 5, type: 'unexplored', walkable: false, color: '#1a1a1a' }, // Unexplored/fog of war
 };
 
 // Colors

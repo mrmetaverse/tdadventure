@@ -33,6 +33,7 @@ export class GameEngine {
     this.world = new World(this.sceneManager.getScene());
     this.inputSystem = new InputSystem();
     this.collisionSystem = new CollisionSystem();
+    this.collisionSystem.setWorld(this.world);
     this.movementSystem = new MovementSystem(this.collisionSystem);
     this.networkClient = new NetworkClient();
 
@@ -53,19 +54,29 @@ export class GameEngine {
     this.init(characterData);
   }
 
-  private init(characterData?: any): void {
+  private async init(characterData?: any): Promise<void> {
     // Initialize input system
     const canvas = this.sceneManager.getRenderer().domElement;
     this.inputSystem.init(canvas);
 
-    // Load default zone
-    const defaultZone = World.generateDefaultZone(GAME_CONFIG.WORLD_SIZE);
-    this.world.loadZone(defaultZone);
-    this.collisionSystem.setZone(defaultZone);
-    this.gameState.currentZone = defaultZone.id;
+    // Load explored chunks from server
+    try {
+      const response = await fetch('/api/world/chunks');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.chunks && Array.isArray(data.chunks)) {
+          this.world.loadExploredChunks(data.chunks);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load world chunks from server:', error);
+    }
 
-    // Create local player - formless if no character data
-    const spawnPoint = defaultZone.spawnPoints[0];
+    // Spawn point at center of initial area
+    const spawnPoint = { 
+      x: GAME_CONFIG.INITIAL_WORLD_SIZE / 2, 
+      y: GAME_CONFIG.INITIAL_WORLD_SIZE / 2 
+    };
     if (characterData) {
       this.localPlayer = new PlayerEntity(
         characterData.name,
@@ -92,21 +103,21 @@ export class GameEngine {
     this.addEntity(this.localPlayer);
     this.gameState.localPlayer = this.localPlayer;
 
-    // Add some NPCs
+    // Add some NPCs around spawn
     for (let i = 0; i < 3; i++) {
-      const npcPos = defaultZone.spawnPoints[i + 1] || {
-        x: spawnPoint.x + (i * 5),
-        y: spawnPoint.y + (i * 5),
+      const npcPos = {
+        x: spawnPoint.x + (i * 5) - 5,
+        y: spawnPoint.y + (i * 3) - 3,
       };
       const npc = new NPC(
         `NPC ${i + 1}`,
         npcPos,
-        [`Hello, traveler! I am NPC ${i + 1}.`, `Welcome to ${defaultZone.name}!`]
+        [`Hello, traveler! I am NPC ${i + 1}.`, `Welcome to the world!`]
       );
       this.addEntity(npc);
     }
 
-    // Add some enemies
+    // Add some enemies around spawn
     for (let i = 0; i < 5; i++) {
       const enemyPos = {
         x: spawnPoint.x + (Math.random() - 0.5) * 20,
@@ -115,6 +126,9 @@ export class GameEngine {
       const enemy = new Enemy(`Goblin ${i + 1}`, enemyPos, 1);
       this.addEntity(enemy);
     }
+
+    // Sync explored chunks to server periodically
+    this.startExplorationSync();
 
     // Connect to network
     this.networkClient.connect();
@@ -286,6 +300,36 @@ export class GameEngine {
   private handleNetworkUpdate(data: any): void {
     // Handle remote player updates from network
     // This would create/update remote player entities
+  }
+
+  private explorationSyncInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Periodically sync explored chunks to server
+   */
+  private startExplorationSync(): void {
+    // Sync every 10 seconds
+    this.explorationSyncInterval = setInterval(async () => {
+      try {
+        const exploredChunks = this.world.getExploredChunks();
+        if (exploredChunks.length > 0) {
+          const response = await fetch('/api/world/chunks', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ chunks: exploredChunks }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`Synced ${exploredChunks.length} chunks to server (total: ${data.totalChunks})`);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to sync exploration to server:', error);
+      }
+    }, 10000); // Every 10 seconds
   }
 
   getGameState(): GameState {

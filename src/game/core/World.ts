@@ -1,234 +1,268 @@
 import * as THREE from 'three';
-import { Zone, Vector2 } from '../../types/game';
+import { Vector2 } from '../../types/game';
 import { TILE_TYPES, GAME_CONFIG } from '../utils/Constants';
+import { ProceduralGenerator, ChunkData } from '../world/ProceduralGenerator';
+import { ExplorationTracker } from '../world/ExplorationTracker';
 
+/**
+ * Infinite procedural world with exploration-based generation
+ * - 1000x1000 initial area at origin
+ * - Generates chunks as players explore
+ * - Only renders explored chunks
+ * - Server-persisted exploration data
+ */
 export class World {
   private scene: THREE.Scene;
-  private currentZone: Zone | null = null;
-  private tileMeshes: Map<string, THREE.Mesh> = new Map();
+  private generator: ProceduralGenerator;
+  private explorationTracker: ExplorationTracker;
   private chunks: Map<string, THREE.Group> = new Map();
+  private loadedChunks: Set<string> = new Set();
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, explorationTracker?: ExplorationTracker) {
     this.scene = scene;
+    this.generator = new ProceduralGenerator(12345); // Fixed seed for consistency
+    this.explorationTracker = explorationTracker || new ExplorationTracker();
+    
+    // Generate initial 1000x1000 area
+    this.generateInitialArea();
   }
 
-  loadZone(zone: Zone): void {
-    this.clearWorld();
-    this.currentZone = zone;
-    this.generateWorld();
-  }
-
-  private clearWorld(): void {
-    this.tileMeshes.forEach((mesh) => {
-      this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      (mesh.material as THREE.Material).dispose();
-    });
-    this.tileMeshes.clear();
-
-    this.chunks.forEach((chunk) => {
-      this.scene.remove(chunk);
-    });
-    this.chunks.clear();
-  }
-
-  private generateWorld(): void {
-    if (!this.currentZone) return;
-
+  /**
+   * Generate the initial 1000x1000 area at origin
+   */
+  private generateInitialArea(): void {
+    const initialSize = GAME_CONFIG.INITIAL_WORLD_SIZE;
     const chunkSize = GAME_CONFIG.CHUNK_SIZE;
-    const chunksX = Math.ceil(this.currentZone.size.x / chunkSize);
-    const chunksY = Math.ceil(this.currentZone.size.y / chunkSize);
+    const chunksX = Math.ceil(initialSize / chunkSize);
+    const chunksY = Math.ceil(initialSize / chunkSize);
 
+    // Generate all chunks in initial area
     for (let cy = 0; cy < chunksY; cy++) {
       for (let cx = 0; cx < chunksX; cx++) {
-        this.generateChunk(cx, cy, chunkSize);
+        const chunk = this.generator.generateChunk(cx, cy);
+        this.explorationTracker.setChunkData(chunk);
+        // Mark initial area as explored
+        this.explorationTracker.markExplored(cx, cy);
       }
     }
   }
 
-  private generateChunk(chunkX: number, chunkY: number, chunkSize: number): void {
-    if (!this.currentZone) return;
+  /**
+   * Update visible chunks based on player position
+   * Generates new chunks as player explores
+   */
+  updateVisibleChunks(playerPosition: Vector2): void {
+    const renderDistance = GAME_CONFIG.RENDER_DISTANCE;
+    const chunksToLoad = this.generator.getChunksInRange(playerPosition, renderDistance);
 
-    const chunkGroup = new THREE.Group();
+    // Mark chunks as explored when player is nearby
+    this.explorationTracker.markChunksExploredAroundPosition(
+      playerPosition,
+      GAME_CONFIG.CHUNK_SIZE,
+      GAME_CONFIG.EXPLORATION_RADIUS
+    );
+
+    // Load/generate chunks in range
+    chunksToLoad.forEach(({ chunkX, chunkY }) => {
+      const chunkKey = `${chunkX}_${chunkY}`;
+      
+      // Only render explored chunks
+      if (!this.explorationTracker.isExplored(chunkX, chunkY)) {
+        return; // Don't render unexplored chunks
+      }
+
+      // Load chunk if not already loaded
+      if (!this.loadedChunks.has(chunkKey)) {
+        this.loadChunk(chunkX, chunkY);
+      }
+    });
+
+    // Update chunk visibility based on distance
+    this.chunks.forEach((chunk, key) => {
+      const [chunkX, chunkY] = key.split('_').map(Number);
+      const { chunkX: playerChunkX, chunkY: playerChunkY } = this.generator.getChunkCoords(playerPosition);
+      
+      const distance = Math.max(
+        Math.abs(chunkX - playerChunkX),
+        Math.abs(chunkY - playerChunkY)
+      );
+
+      chunk.visible = distance <= renderDistance && this.explorationTracker.isExplored(chunkX, chunkY);
+    });
+
+    // Unload distant chunks
+    this.unloadDistantChunks(playerPosition, renderDistance + 2);
+  }
+
+  /**
+   * Load or generate a chunk
+   */
+  private loadChunk(chunkX: number, chunkY: number): void {
     const chunkKey = `${chunkX}_${chunkY}`;
+    
+    if (this.loadedChunks.has(chunkKey)) {
+      return; // Already loaded
+    }
 
-    const startX = chunkX * chunkSize;
-    const startY = chunkY * chunkSize;
-    const endX = Math.min(startX + chunkSize, this.currentZone.size.x);
-    const endY = Math.min(startY + chunkSize, this.currentZone.size.y);
+    // Get chunk data (generate if needed)
+    let chunkData = this.explorationTracker.getChunkData(chunkX, chunkY);
+    
+    if (!chunkData) {
+      // Generate new chunk
+      chunkData = this.generator.generateChunk(chunkX, chunkY);
+      this.explorationTracker.setChunkData(chunkData);
+    }
 
-    // Create merged geometry for better performance
-    const geometries: THREE.PlaneGeometry[] = [];
-    const materials: THREE.MeshBasicMaterial[] = [];
+    // Create visual representation
+    const chunkGroup = this.createChunkMesh(chunkData);
+    this.chunks.set(chunkKey, chunkGroup);
+    this.loadedChunks.add(chunkKey);
+    this.scene.add(chunkGroup);
+  }
 
-    for (let y = startY; y < endY; y++) {
-      for (let x = startX; x < endX; x++) {
-        const tileId = this.currentZone.tiles[y][x];
+  /**
+   * Create Three.js mesh for a chunk
+   */
+  private createChunkMesh(chunkData: ChunkData): THREE.Group {
+    const chunkGroup = new THREE.Group();
+    const chunkSize = GAME_CONFIG.CHUNK_SIZE;
+
+    for (let y = 0; y < chunkSize; y++) {
+      for (let x = 0; x < chunkSize; x++) {
+        const tileId = chunkData.tiles[y][x];
         const tileData = TILE_TYPES[tileId];
 
         if (tileData) {
+          const worldX = chunkData.chunkX * chunkSize + x;
+          const worldY = chunkData.chunkY * chunkSize + y;
+
           const geometry = new THREE.PlaneGeometry(
             GAME_CONFIG.TILE_SIZE,
             GAME_CONFIG.TILE_SIZE
           );
-          geometry.translate(x, 0, y);
           
           const material = new THREE.MeshBasicMaterial({
             color: tileData.color,
             side: THREE.DoubleSide,
+            transparent: tileId === 5, // Unexplored tiles are semi-transparent
+            opacity: tileId === 5 ? 0.3 : 1.0,
           });
 
           const mesh = new THREE.Mesh(geometry, material);
           mesh.rotation.x = -Math.PI / 2;
-          mesh.position.y = -0.01;
-          chunkGroup.add(mesh);
+          mesh.position.set(worldX, -0.01, worldY);
 
           // Add slight height variation for non-walkable tiles
-          if (!tileData.walkable) {
+          if (!tileData.walkable && tileId !== 5) {
             mesh.position.y = 0.1;
           }
+
+          chunkGroup.add(mesh);
         }
       }
     }
 
-    chunkGroup.name = `chunk_${chunkKey}`;
-    this.chunks.set(chunkKey, chunkGroup);
-    this.scene.add(chunkGroup);
+    chunkGroup.name = `chunk_${chunkData.chunkX}_${chunkData.chunkY}`;
+    return chunkGroup;
   }
 
-  updateVisibleChunks(cameraPosition: Vector2): void {
-    if (!this.currentZone) return;
-
-    const chunkSize = GAME_CONFIG.CHUNK_SIZE;
-    const renderDistance = GAME_CONFIG.RENDER_DISTANCE;
-
-    const centerChunkX = Math.floor(cameraPosition.x / chunkSize);
-    const centerChunkY = Math.floor(cameraPosition.y / chunkSize);
+  /**
+   * Unload chunks that are too far away
+   */
+  private unloadDistantChunks(playerPosition: Vector2, maxDistance: number): void {
+    const { chunkX: playerChunkX, chunkY: playerChunkY } = this.generator.getChunkCoords(playerPosition);
+    const chunksToUnload: string[] = [];
 
     this.chunks.forEach((chunk, key) => {
       const [chunkX, chunkY] = key.split('_').map(Number);
       const distance = Math.max(
-        Math.abs(chunkX - centerChunkX),
-        Math.abs(chunkY - centerChunkY)
+        Math.abs(chunkX - playerChunkX),
+        Math.abs(chunkY - playerChunkY)
       );
 
-      chunk.visible = distance <= renderDistance;
+      if (distance > maxDistance) {
+        chunksToUnload.push(key);
+      }
+    });
+
+    chunksToUnload.forEach(key => {
+      const chunk = this.chunks.get(key);
+      if (chunk) {
+        this.scene.remove(chunk);
+        chunk.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            if (child.material instanceof THREE.Material) {
+              child.material.dispose();
+            }
+          }
+        });
+        this.chunks.delete(key);
+        this.loadedChunks.delete(key);
+      }
     });
   }
 
-  getCurrentZone(): Zone | null {
-    return this.currentZone;
-  }
-
+  /**
+   * Get tile at world position
+   */
   getTileAt(position: Vector2): number {
-    if (!this.currentZone) return 0;
+    const { chunkX, chunkY } = this.generator.getChunkCoords(position);
+    const chunkData = this.explorationTracker.getChunkData(chunkX, chunkY);
 
-    const x = Math.floor(position.x);
-    const y = Math.floor(position.y);
-
-    if (
-      x < 0 ||
-      y < 0 ||
-      y >= this.currentZone.tiles.length ||
-      x >= this.currentZone.tiles[0].length
-    ) {
-      return 4; // Wall/out of bounds
+    if (!chunkData) {
+      return 5; // Unexplored
     }
 
-    return this.currentZone.tiles[y][x];
+    const chunkSize = GAME_CONFIG.CHUNK_SIZE;
+    const localX = Math.floor(position.x) % chunkSize;
+    const localY = Math.floor(position.y) % chunkSize;
+
+    // Handle negative coordinates
+    const adjustedX = localX < 0 ? chunkSize + localX : localX;
+    const adjustedY = localY < 0 ? chunkSize + localY : localY;
+
+    if (adjustedY >= 0 && adjustedY < chunkData.tiles.length &&
+        adjustedX >= 0 && adjustedX < chunkData.tiles[adjustedY].length) {
+      return chunkData.tiles[adjustedY][adjustedX];
+    }
+
+    return 5; // Unexplored
   }
 
+  /**
+   * Check if position is walkable
+   */
   isWalkable(position: Vector2): boolean {
     const tileId = this.getTileAt(position);
+    
+    // Unexplored areas are not walkable
+    if (tileId === 5) {
+      return false;
+    }
+
     const tile = TILE_TYPES[tileId];
     return tile ? tile.walkable : false;
   }
 
-  static generateDefaultZone(size: Vector2): Zone {
-    const tiles: number[][] = [];
+  /**
+   * Get exploration tracker (for server sync)
+   */
+  getExplorationTracker(): ExplorationTracker {
+    return this.explorationTracker;
+  }
 
-    for (let y = 0; y < size.y; y++) {
-      const row: number[] = [];
-      for (let x = 0; x < size.x; x++) {
-        // Create borders
-        if (x === 0 || y === 0 || x === size.x - 1 || y === size.y - 1) {
-          row.push(4); // Wall
-        }
-        // Random terrain
-        else {
-          const rand = Math.random();
-          if (rand < 0.7) {
-            row.push(0); // Grass
-          } else if (rand < 0.85) {
-            row.push(1); // Dirt
-          } else if (rand < 0.95) {
-            row.push(2); // Stone
-          } else {
-            row.push(3); // Water
-          }
-        }
-      }
-      tiles.push(row);
-    }
+  /**
+   * Load explored chunks from server
+   */
+  loadExploredChunks(chunks: Array<{ chunkX: number; chunkY: number; tiles?: number[][] }>): void {
+    this.explorationTracker.loadExploredChunks(chunks);
+  }
 
-    // Add some walls randomly (but avoid center area for spawn points)
-    for (let i = 0; i < 20; i++) {
-      const x = Math.floor(Math.random() * (size.x - 4)) + 2;
-      const y = Math.floor(Math.random() * (size.y - 4)) + 2;
-      
-      // Don't place walls near spawn points
-      const centerX = size.x / 2;
-      const centerY = size.y / 2;
-      const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-      
-      if (distFromCenter > 10) {
-        tiles[y][x] = 4;
-      }
-    }
-
-    // Find walkable spawn points
-    const findWalkableSpawn = (targetX: number, targetY: number): Vector2 => {
-      // Try the target position first
-      if (tiles[Math.floor(targetY)][Math.floor(targetX)] !== 4 && 
-          tiles[Math.floor(targetY)][Math.floor(targetX)] !== 3) {
-        return { x: targetX, y: targetY };
-      }
-      
-      // Search in a spiral pattern for a walkable tile
-      for (let radius = 1; radius < 20; radius++) {
-        for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
-          const x = Math.floor(targetX + Math.cos(angle) * radius);
-          const y = Math.floor(targetY + Math.sin(angle) * radius);
-          
-          if (x >= 1 && x < size.x - 1 && y >= 1 && y < size.y - 1) {
-            const tileId = tiles[y][x];
-            if (tileId !== 4 && tileId !== 3) { // Not wall or water
-              return { x: x + 0.5, y: y + 0.5 }; // Center of tile
-            }
-          }
-        }
-      }
-      
-      // Fallback to a safe position
-      return { x: 10, y: 10 };
-    };
-
-    const spawnPoints: Vector2[] = [
-      findWalkableSpawn(size.x / 2, size.y / 2),
-      findWalkableSpawn(size.x / 4, size.y / 4),
-      findWalkableSpawn((size.x * 3) / 4, (size.y * 3) / 4),
-    ];
-
-    return {
-      id: 'default_zone',
-      name: 'Starting Plains',
-      size,
-      tiles,
-      spawnPoints,
-      npcs: [],
-      enemies: [],
-    };
+  /**
+   * Get all explored chunks for server persistence
+   */
+  getExploredChunks(): Array<{ chunkX: number; chunkY: number; tiles: number[][] }> {
+    return this.explorationTracker.getSerializedData();
   }
 }
-
-

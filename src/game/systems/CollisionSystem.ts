@@ -1,12 +1,13 @@
-import { Entity, Vector2, Zone } from '../../types/game';
+import { Entity, Vector2 } from '../../types/game';
 import { TILE_TYPES } from '../utils/Constants';
 import { Vector2 as Vec2 } from '../utils/Vector2';
+import { World } from '../core/World';
 
 export class CollisionSystem {
-  private currentZone: Zone | null = null;
+  private world: World | null = null;
 
-  setZone(zone: Zone): void {
-    this.currentZone = zone;
+  setWorld(world: World): void {
+    this.world = world;
   }
 
   checkEntityCollision(entity1: Entity, entity2: Entity): boolean {
@@ -16,7 +17,7 @@ export class CollisionSystem {
   }
 
   checkTileCollision(position: Vector2, entitySize: number): boolean {
-    if (!this.currentZone) return false;
+    if (!this.world) return false;
 
     const halfSize = entitySize / 2;
     const corners = [
@@ -27,22 +28,7 @@ export class CollisionSystem {
     ];
 
     for (const corner of corners) {
-      const tileX = Math.floor(corner.x);
-      const tileY = Math.floor(corner.y);
-
-      if (
-        tileX < 0 ||
-        tileY < 0 ||
-        tileY >= this.currentZone.tiles.length ||
-        tileX >= this.currentZone.tiles[0].length
-      ) {
-        return true; // Out of bounds
-      }
-
-      const tileId = this.currentZone.tiles[tileY][tileX];
-      const tile = TILE_TYPES[tileId];
-
-      if (!tile || !tile.walkable) {
+      if (!this.world.isWalkable(corner)) {
         return true; // Collision with unwalkable tile
       }
     }
@@ -116,11 +102,8 @@ export class CollisionSystem {
   }
 
   clampToWorld(position: Vector2): Vector2 {
-    if (!this.currentZone) return position;
-
-    return {
-      x: Math.max(0, Math.min(this.currentZone.size.x - 1, position.x)),
-      y: Math.max(0, Math.min(this.currentZone.size.y - 1, position.y)),
-    };
+    // For infinite world, just return position
+    // Could add bounds checking if needed
+    return position;
   }
 }
