@@ -6,6 +6,7 @@ import { getClassData } from '../data/Classes';
 import { getRaceData } from '../data/Races';
 import { getDivineData } from '../data/Divines';
 import { AlignmentSystem } from '../utils/Alignment';
+import { SpriteSystem, SpriteAnimation } from '../systems/SpriteSystem';
 import { v4 as uuidv4 } from 'uuid';
 
 export class Player implements PlayerType {
@@ -40,6 +41,15 @@ export class Player implements PlayerType {
   // Combat
   attackCooldown: number = 0;
   attackRange: number = 1.5;
+  
+  // Sprite system
+  private spriteSystem: SpriteSystem;
+  private spriteAnimation?: SpriteAnimation;
+  private currentAnimation: 'idle' | 'walk' | 'attack' = 'idle';
+  private animationFrame: number = 0;
+  private animationTime: number = 0;
+  private spriteMesh?: THREE.Mesh;
+  private isGeneratingSprites: boolean = false;
 
   constructor(
     name: string,
@@ -162,7 +172,103 @@ export class Player implements PlayerType {
     this.inventory = [];
     this.equipment = {};
 
-    this.createMesh();
+    this.spriteSystem = new SpriteSystem();
+    
+    // Generate and load sprites if not formless
+    if (!this.isFormless && this.class && this.race && this.divine) {
+      this.loadSprites();
+    } else {
+      this.createMesh();
+    }
+  }
+
+  /**
+   * Load AI-generated sprites for the character
+   */
+  private async loadSprites(): Promise<void> {
+    if (!this.class || !this.race || !this.divine || this.isGeneratingSprites) return;
+    
+    this.isGeneratingSprites = true;
+    
+    try {
+      // Generate sprites
+      this.spriteAnimation = await this.spriteSystem.getCharacterSprites(
+        this.class,
+        this.race,
+        this.divine,
+        this.equipment
+      );
+      
+      // Load first frame texture
+      if (this.spriteAnimation && this.spriteAnimation.idle.length > 0) {
+        const texture = await this.spriteSystem.loadTexture(this.spriteAnimation.idle[0]);
+        this.createSpriteMesh(texture);
+      }
+    } catch (error) {
+      console.error('Failed to load sprites:', error);
+      // Fallback to basic mesh
+      this.createMesh();
+    } finally {
+      this.isGeneratingSprites = false;
+    }
+  }
+
+  /**
+   * Create sprite-based mesh
+   */
+  private createSpriteMesh(texture: THREE.Texture): void {
+    // Remove old mesh if exists
+    if (this.mesh) {
+      this.mesh.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+    }
+
+    const group = new THREE.Group();
+
+    // Create sprite mesh
+    const spriteGeometry = new THREE.PlaneGeometry(this.size, this.size);
+    const spriteMaterial = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide,
+    });
+    
+    this.spriteMesh = new THREE.Mesh(spriteGeometry, spriteMaterial);
+    this.spriteMesh.rotation.x = -Math.PI / 2; // Face up for top-down view
+    this.spriteMesh.position.y = 0.01;
+    group.add(this.spriteMesh);
+
+    // Health bar background
+    const healthBgGeometry = new THREE.PlaneGeometry(this.size, 0.1);
+    const healthBgMaterial = new THREE.MeshBasicMaterial({
+      color: COLORS.HEALTH_BAR_BG,
+    });
+    const healthBg = new THREE.Mesh(healthBgGeometry, healthBgMaterial);
+    healthBg.position.set(0, 0.02, -this.size / 2 - 0.2);
+    healthBg.rotation.x = -Math.PI / 2;
+    group.add(healthBg);
+
+    // Health bar
+    const healthGeometry = new THREE.PlaneGeometry(this.size, 0.08);
+    const healthMaterial = new THREE.MeshBasicMaterial({
+      color: COLORS.HEALTH_BAR_FG,
+    });
+    const healthBar = new THREE.Mesh(healthGeometry, healthMaterial);
+    healthBar.position.set(0, 0.03, -this.size / 2 - 0.2);
+    healthBar.rotation.x = -Math.PI / 2;
+    healthBar.name = 'healthBar';
+    group.add(healthBar);
+
+    group.name = `player_${this.id}`;
+    this.mesh = group;
   }
 
   private createFormlessMesh(): void {
@@ -268,6 +374,9 @@ export class Player implements PlayerType {
         // Rotate slowly
         this.mesh.rotation.y += deltaTime * 0.5;
       } else {
+        // Update sprite animation
+        this.updateSpriteAnimation(deltaTime);
+        
         // Update health bar
         const healthBar = this.mesh.getObjectByName('healthBar') as THREE.Mesh;
         if (healthBar) {
@@ -276,11 +385,58 @@ export class Player implements PlayerType {
           healthBar.position.x = (-this.size / 2) * (1 - healthPercent);
         }
         
-        // Update rotation (rotate the arrow indicator)
-        const arrow = this.mesh.children[1];
-        if (arrow) {
-          arrow.rotation.z = this.rotation;
+        // Update sprite rotation to face movement direction
+        if (this.spriteMesh) {
+          this.spriteMesh.rotation.z = this.rotation;
         }
+      }
+    }
+  }
+
+  /**
+   * Update sprite animation frames
+   */
+  private updateSpriteAnimation(deltaTime: number): void {
+    if (!this.spriteAnimation || !this.spriteMesh) return;
+
+    // Determine current animation state
+    const isMoving = this.velocity.x !== 0 || this.velocity.y !== 0;
+    const isAttacking = this.attackCooldown > 0.4; // Show attack animation during cooldown
+    
+    let targetAnimation: 'idle' | 'walk' | 'attack' = 'idle';
+    if (isAttacking) {
+      targetAnimation = 'attack';
+    } else if (isMoving) {
+      targetAnimation = 'walk';
+    }
+
+    // Switch animation if needed
+    if (targetAnimation !== this.currentAnimation) {
+      this.currentAnimation = targetAnimation;
+      this.animationFrame = 0;
+      this.animationTime = 0;
+    }
+
+    // Update animation frame
+    const frames = this.spriteAnimation[this.currentAnimation];
+    if (frames && frames.length > 0) {
+      this.animationTime += deltaTime;
+      const frameRate = 0.2; // 5 frames per second
+      
+      if (this.animationTime >= frameRate) {
+        this.animationTime = 0;
+        this.animationFrame = (this.animationFrame + 1) % frames.length;
+        
+        // Update texture
+        this.spriteSystem.loadTexture(frames[this.animationFrame]).then((texture) => {
+          if (this.spriteMesh && this.spriteMesh.material instanceof THREE.MeshBasicMaterial) {
+            if (this.spriteMesh.material.map) {
+              this.spriteMesh.material.map.dispose();
+            }
+            this.spriteMesh.material.map = texture;
+            this.spriteMesh.material.needsUpdate = true;
+          }
+        });
       }
     }
   }
@@ -484,13 +640,15 @@ export class Player implements PlayerType {
       });
     }
 
-    // Create new mesh
-    this.createMesh();
+    // Initialize sprite system
+    this.spriteSystem = new SpriteSystem();
+    
+    // Generate and load sprites for the new character
+    this.loadSprites();
     
     // Add new mesh to scene if we had a parent
-    if (this.mesh && this.mesh.parent === null) {
-      // The mesh will be added by the game engine's addEntity method
-      // For now, we'll let the engine handle it
+    if (this.mesh && this.mesh.parent === null && parent) {
+      parent.add(this.mesh);
     }
   }
 
