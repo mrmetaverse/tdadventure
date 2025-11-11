@@ -32,6 +32,10 @@ export interface Player extends Entity {
   equipment: Equipment;
   stats: PlayerStats;
   isLocal: boolean;
+  class?: string;
+  race?: string;
+  divine?: string;
+  alignment?: any;
 }
 
 export interface PlayerStats {

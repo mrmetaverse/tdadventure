@@ -1,19 +1,30 @@
 import React, { useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import GameUI from '../components/game/GameUI';
 import { useGameStore } from '../store/gameStore';
+import { useCharacterStore } from '../store/characterStore';
 import { GameEngine } from '../game/core/GameEngine';
 
 const GamePage: React.FC = () => {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const { setPlayer, setConnected, setEntities } = useGameStore();
+  const { getSelectedCharacter } = useCharacterStore();
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Initialize game engine
-    const engine = new GameEngine(canvas);
+    // Get selected character
+    const character = getSelectedCharacter();
+    if (!character) {
+      router.push('/');
+      return;
+    }
+
+    // Initialize game engine with character data
+    const engine = new GameEngine(canvas, character);
     engineRef.current = engine;
 
     // Sync game state with Zustand store
@@ -40,7 +51,7 @@ const GamePage: React.FC = () => {
       engine.dispose();
       setPlayer(null);
     };
-    }, [setPlayer, setConnected, setEntities]);
+    }, [setPlayer, setConnected, setEntities, getSelectedCharacter, router]);
 
   return (
     <div className="game-container relative w-screen h-screen overflow-hidden">

@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { Player as PlayerType, Vector2, PlayerStats, Equipment, InventoryItem } from '@types/game';
+import { CharacterClass, CharacterRace, Divine, Alignment } from '@types/character';
 import { GAME_CONFIG, COLORS, getExperienceForLevel } from '../utils/Constants';
+import { getClassData } from '../data/Classes';
+import { getRaceData } from '../data/Races';
+import { getDivineData } from '../data/Divines';
+import { AlignmentSystem } from '../utils/Alignment';
 import { v4 as uuidv4 } from 'uuid';
 
 export class Player implements PlayerType {
@@ -24,30 +29,90 @@ export class Player implements PlayerType {
   stats: PlayerStats;
   isLocal: boolean;
   mesh?: THREE.Group;
+  
+  // Character data
+  class: CharacterClass;
+  race: CharacterRace;
+  divine: Divine;
+  alignment: Alignment;
 
-  constructor(name: string, position: Vector2, isLocal: boolean = false) {
+  constructor(
+    name: string,
+    position: Vector2,
+    characterData: {
+      class: CharacterClass;
+      race: CharacterRace;
+      divine: Divine;
+      alignment: Alignment;
+      level?: number;
+      experience?: number;
+    },
+    isLocal: boolean = false
+  ) {
     this.id = uuidv4();
     this.name = name;
     this.position = position;
     this.velocity = { x: 0, y: 0 };
     this.rotation = 0;
-    this.level = 1;
-    this.experience = 0;
-    this.experienceToLevel = getExperienceForLevel(2);
+    this.level = characterData.level || 1;
+    this.experience = characterData.experience || 0;
+    this.experienceToLevel = getExperienceForLevel(this.level + 1);
     this.speed = GAME_CONFIG.PLAYER_SPEED;
     this.size = GAME_CONFIG.PLAYER_SIZE;
     this.isLocal = isLocal;
     
+    // Set character data
+    this.class = characterData.class;
+    this.race = characterData.race;
+    this.divine = characterData.divine;
+    this.alignment = { ...characterData.alignment };
+
+    // Calculate stats from class, race, and divine
+    const classData = getClassData(characterData.class);
+    const raceData = getRaceData(characterData.race);
+    const divineData = getDivineData(characterData.divine);
+
+    // Start with base class stats
     this.stats = {
-      strength: 10,
-      dexterity: 10,
-      intelligence: 10,
-      vitality: 10,
-      attackDamage: 15,
-      defense: 5,
-      critChance: 0.05,
-      critDamage: 1.5,
+      strength: classData.baseStats.strength || 10,
+      dexterity: classData.baseStats.dexterity || 10,
+      intelligence: classData.baseStats.intelligence || 10,
+      vitality: classData.baseStats.vitality || 10,
+      attackDamage: classData.baseStats.attackDamage || 15,
+      defense: classData.baseStats.defense || 5,
+      critChance: classData.baseStats.critChance || 0.05,
+      critDamage: classData.baseStats.critDamage || 1.5,
     };
+
+    // Apply race bonuses
+    if (raceData.statBonuses.strength) this.stats.strength += raceData.statBonuses.strength;
+    if (raceData.statBonuses.dexterity) this.stats.dexterity += raceData.statBonuses.dexterity;
+    if (raceData.statBonuses.intelligence) this.stats.intelligence += raceData.statBonuses.intelligence;
+    if (raceData.statBonuses.vitality) this.stats.vitality += raceData.statBonuses.vitality;
+    if (raceData.statBonuses.defense) this.stats.defense += raceData.statBonuses.defense || 0;
+
+    // Apply divine bonuses
+    if (divineData.bonuses.strength) this.stats.strength += divineData.bonuses.strength;
+    if (divineData.bonuses.dexterity) this.stats.dexterity += divineData.bonuses.dexterity;
+    if (divineData.bonuses.intelligence) this.stats.intelligence += divineData.bonuses.intelligence;
+    if (divineData.bonuses.vitality) this.stats.vitality += divineData.bonuses.vitality;
+    if (divineData.bonuses.attackDamage) this.stats.attackDamage += divineData.bonuses.attackDamage || 0;
+    if (divineData.bonuses.defense) this.stats.defense += divineData.bonuses.defense || 0;
+    if (divineData.bonuses.critChance) this.stats.critChance += divineData.bonuses.critChance || 0;
+    if (divineData.bonuses.critDamage) this.stats.critDamage += divineData.bonuses.critDamage || 0;
+
+    // Apply level-based stat growth
+    if (this.level > 1) {
+      const levelsGained = this.level - 1;
+      if (classData.statGrowth.strength) this.stats.strength += classData.statGrowth.strength * levelsGained;
+      if (classData.statGrowth.dexterity) this.stats.dexterity += classData.statGrowth.dexterity * levelsGained;
+      if (classData.statGrowth.intelligence) this.stats.intelligence += classData.statGrowth.intelligence * levelsGained;
+      if (classData.statGrowth.vitality) this.stats.vitality += classData.statGrowth.vitality * levelsGained;
+      if (classData.statGrowth.attackDamage) this.stats.attackDamage += classData.statGrowth.attackDamage * levelsGained;
+      if (classData.statGrowth.defense) this.stats.defense += classData.statGrowth.defense * levelsGained;
+      if (classData.statGrowth.critChance) this.stats.critChance += classData.statGrowth.critChance * levelsGained;
+      if (classData.statGrowth.critDamage) this.stats.critDamage += classData.statGrowth.critDamage * levelsGained;
+    }
 
     this.maxHealth = 100 + this.stats.vitality * 10;
     this.health = this.maxHealth;
@@ -161,13 +226,24 @@ export class Player implements PlayerType {
     this.level++;
     this.experienceToLevel = getExperienceForLevel(this.level + 1);
 
-    // Increase stats
-    this.stats.strength += 2;
-    this.stats.dexterity += 2;
-    this.stats.intelligence += 2;
-    this.stats.vitality += 2;
-    this.stats.attackDamage += 5;
-    this.stats.defense += 2;
+    // Increase stats based on class growth
+    const classData = getClassData(this.class);
+    if (classData.statGrowth.strength) this.stats.strength += classData.statGrowth.strength;
+    if (classData.statGrowth.dexterity) this.stats.dexterity += classData.statGrowth.dexterity;
+    if (classData.statGrowth.intelligence) this.stats.intelligence += classData.statGrowth.intelligence;
+    if (classData.statGrowth.vitality) this.stats.vitality += classData.statGrowth.vitality;
+    if (classData.statGrowth.attackDamage) this.stats.attackDamage += classData.statGrowth.attackDamage;
+    if (classData.statGrowth.defense) this.stats.defense += classData.statGrowth.defense;
+    if (classData.statGrowth.critChance) this.stats.critChance += classData.statGrowth.critChance;
+    if (classData.statGrowth.critDamage) this.stats.critDamage += classData.statGrowth.critDamage;
+
+    // Human racial bonus: +1 to all stats per 5 levels
+    if (this.race === 'human' && this.level % 5 === 0) {
+      this.stats.strength += 1;
+      this.stats.dexterity += 1;
+      this.stats.intelligence += 1;
+      this.stats.vitality += 1;
+    }
 
     // Update max health and mana
     const oldMaxHealth = this.maxHealth;
@@ -178,6 +254,14 @@ export class Player implements PlayerType {
     // Restore health and mana by the increase amount
     this.health += this.maxHealth - oldMaxHealth;
     this.mana += this.maxMana - oldMaxMana;
+  }
+
+  adjustAlignment(lawfulChange: number, goodChange: number): void {
+    this.alignment = AlignmentSystem.adjustAlignment(this.alignment, lawfulChange, goodChange);
+  }
+
+  getAlignmentName(): string {
+    return AlignmentSystem.getAlignmentName(this.alignment);
   }
 
   addItem(item: InventoryItem): void {
@@ -219,6 +303,10 @@ export class Player implements PlayerType {
       level: this.level,
       experience: this.experience,
       isLocal: this.isLocal,
+      class: this.class,
+      race: this.race,
+      divine: this.divine,
+      alignment: this.alignment,
     };
   }
 }

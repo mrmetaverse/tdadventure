@@ -10,6 +10,7 @@ import { Enemy } from '../entities/Enemy';
 import { NPC } from '../entities/NPC';
 import { GAME_CONFIG } from '../utils/Constants';
 import { NetworkClient } from '../network/NetworkClient';
+import { AlignmentSystem } from '../utils/Alignment';
 
 export class GameEngine {
   private sceneManager: SceneManager;
@@ -27,7 +28,7 @@ export class GameEngine {
   private localPlayer: PlayerEntity | null = null;
   private entities: Map<string, Entity> = new Map();
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, characterData?: any) {
     this.sceneManager = new SceneManager(canvas);
     this.world = new World(this.sceneManager.getScene());
     this.inputSystem = new InputSystem();
@@ -49,10 +50,10 @@ export class GameEngine {
       deltaTime: 0,
     };
 
-    this.init();
+    this.init(characterData);
   }
 
-  private init(): void {
+  private init(characterData?: any): void {
     // Initialize input system
     const canvas = this.sceneManager.getRenderer().domElement;
     this.inputSystem.init(canvas);
@@ -63,9 +64,38 @@ export class GameEngine {
     this.collisionSystem.setZone(defaultZone);
     this.gameState.currentZone = defaultZone.id;
 
-    // Create local player
+    // Create local player with character data or defaults
     const spawnPoint = defaultZone.spawnPoints[0];
-    this.localPlayer = new PlayerEntity('Player', spawnPoint, true);
+    if (characterData) {
+      this.localPlayer = new PlayerEntity(
+        characterData.name,
+        spawnPoint,
+        {
+          class: characterData.class,
+          race: characterData.race,
+          divine: characterData.divine,
+          alignment: characterData.alignment,
+          level: characterData.level,
+          experience: characterData.experience,
+        },
+        true
+      );
+    } else {
+      // Default character for testing
+      this.localPlayer = new PlayerEntity(
+        'Player',
+        spawnPoint,
+        {
+          class: 'warrior',
+          race: 'human',
+          divine: 'fire',
+          alignment: AlignmentSystem.getStartingAlignment('neutral', 'neutral'),
+          level: 1,
+          experience: 0,
+        },
+        true
+      );
+    }
     this.addEntity(this.localPlayer);
     this.gameState.localPlayer = this.localPlayer;
 

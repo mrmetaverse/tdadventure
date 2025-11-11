@@ -23,7 +23,23 @@ const PlayerHUD: React.FC = () => {
         {/* Player Info */}
         <div className="mb-3">
           <div className="text-game-text font-bold text-lg mb-1">{player.name}</div>
-          <div className="text-game-text text-sm opacity-75">Level {player.level}</div>
+          <div className="text-game-text text-sm opacity-75">
+            Level {player.level} {player.class && (
+              <span className="capitalize">{player.class}</span>
+            )}
+          </div>
+          {player.race && (
+            <div className="text-game-text text-xs opacity-60 capitalize">
+              {player.race} • {player.divine && (
+                <span className="capitalize">{player.divine}</span>
+              )}
+            </div>
+          )}
+          {player.alignment && (
+            <div className="text-game-text text-xs opacity-60 mt-1">
+              Alignment: {player.getAlignmentName ? player.getAlignmentName() : 'Neutral'}
+            </div>
+          )}
         </div>
 
         {/* Health Bar */}
