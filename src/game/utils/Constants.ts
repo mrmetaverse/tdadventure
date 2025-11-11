@@ -39,9 +39,13 @@ export const COLORS = {
 
 // Network
 export const NETWORK = {
-  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001',
+  WS_URL: process.env.NEXT_PUBLIC_WS_URL || 
+    (typeof window !== 'undefined' 
+      ? `ws://${window.location.hostname}:3001` 
+      : 'ws://localhost:3001'),
   RECONNECT_INTERVAL: 3000,
   PING_INTERVAL: 5000,
+  USE_POLLING: process.env.NEXT_PUBLIC_USE_POLLING === 'true', // Fallback to polling if WebSocket unavailable
 };
 
 // Input

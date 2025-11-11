@@ -2,18 +2,22 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/pages/index.tsx",
-      "use": "@vercel/next"
-    },
-    {
-      "src": "src/pages/game.tsx",
+      "src": "package.json",
       "use": "@vercel/next"
     }
   ],
   "routes": [
     {
-      "src": "/api/game/state",
-      "dest": "/src/pages/api/game/state.ts"
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
     }
-  ]
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "functions": {
+    "src/pages/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
 }

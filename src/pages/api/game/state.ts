@@ -1,33 +1,47 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { Server } from 'socket.io';
+import type { NextApiRequest, NextApiResponse } from 'next';
 
-let io: Server;
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
+// In-memory game state (for single server instance)
+// In production, use Redis or a database
+const gameState = {
+  players: new Map(),
+  entities: new Map(),
+  lastUpdate: Date.now(),
 };
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'POST') {
-    if (!io) {
-      const server = res.socket.server;
-      io = new Server(server);
+  if (req.method === 'GET') {
+    // Return current game state
+    res.status(200).json({
+      players: Array.from(gameState.players.values()),
+      entities: Array.from(gameState.entities.values()),
+      timestamp: Date.now(),
+    });
+  } else if (req.method === 'POST') {
+    // Update game state
+    const { type, data, playerId } = req.body;
 
-      io.on('connection', (socket) => {
-        console.log('A user connected');
-
-        socket.on('disconnect', () => {
-          console.log('User disconnected');
-        });
-
-        // Handle game state updates and other events here
-      });
+    switch (type) {
+      case 'player_update':
+        if (playerId && data.position) {
+          gameState.players.set(playerId, {
+            id: playerId,
+            position: data.position,
+            velocity: data.velocity,
+            rotation: data.rotation,
+            lastUpdate: Date.now(),
+          });
+        }
+        break;
+      case 'entity_update':
+        if (data.id) {
+          gameState.entities.set(data.id, data);
+        }
+        break;
     }
-    res.status(200).json({ message: 'WebSocket connection established' });
+
+    res.status(200).json({ success: true });
   } else {
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['GET', 'POST']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 }

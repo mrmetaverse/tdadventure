@@ -16,10 +16,24 @@ export class NetworkClient {
     if (this.isConnected || this.ws) return;
 
     try {
-      const wsUrl = typeof window !== 'undefined' 
-        ? NETWORK.WS_URL.replace('ws://', 'ws://').replace('wss://', 'wss://')
-        : NETWORK.WS_URL;
+      // Determine WebSocket URL
+      let wsUrl = NETWORK.WS_URL;
+      
+      // If in browser and URL is relative, make it absolute
+      if (typeof window !== 'undefined') {
+        if (wsUrl.startsWith('ws://') || wsUrl.startsWith('wss://')) {
+          // Already absolute
+        } else if (wsUrl.startsWith('/')) {
+          // Relative to current host
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${protocol}//${window.location.host}${wsUrl}`;
+        } else {
+          // Use environment variable or default
+          wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+        }
+      }
 
+      console.log('Connecting to WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {

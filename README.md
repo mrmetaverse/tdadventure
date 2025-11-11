@@ -19,6 +19,8 @@ A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. I
 - **AI-generated character sprites** based on class, race, divine, and equipment
 - **Dynamic sprite regeneration** when equipping new items
 - **Inventory and equipment** system with drag-and-drop
+- **Character creation** with 5 classes, 3 races, 9 divines, and 9 alignment options
+- **Formless player state** - join immediately as a ball of light, create character in-game
 
 ### Technical Features
 - **Three.js** rendering with orthographic camera
@@ -29,49 +31,68 @@ A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. I
 - **Zustand** for state management
 - **TailwindCSS** for UI styling
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### Prerequisites
+### Deploy to Vercel (Recommended)
 
-- Node.js 18+ 
-- npm or yarn
-- Git
-- (Optional) Replicate API key for AI sprite generation
+1. **Install Vercel CLI:**
+```bash
+npm i -g vercel
+```
 
-### Installation
+2. **Login and Deploy:**
+```bash
+cd tdadventure
+vercel login
+vercel
+```
 
-1. Clone the repository:
+3. **Set Environment Variables in Vercel Dashboard:**
+   - Go to your project settings
+   - Add `REPLICATE_API_KEY` (optional, for AI sprites)
+   - Add `NEXT_PUBLIC_WS_URL` (WebSocket server URL - see below)
+
+4. **Deploy WebSocket Server:**
+   - See [DEPLOYMENT.md](./DEPLOYMENT.md) for options
+   - Recommended: Deploy to Railway, Render, or Fly.io
+   - Update `NEXT_PUBLIC_WS_URL` in Vercel to point to your server
+
+### Local Development
+
+1. **Clone and Install:**
 ```bash
 git clone https://github.com/mrmetaverse/tdadventure.git
 cd tdadventure
-```
-
-2. Install dependencies:
-```bash
 npm install
 ```
 
-3. (Optional) Set up AI sprite generation:
-   - Get a Replicate API key from https://replicate.com/account/api-tokens
-   - Create a `.env.local` file in the root directory:
-   ```bash
-   REPLICATE_API_KEY=your_api_key_here
-   ```
-   - Without an API key, the game will use placeholder sprites
-
-4. Run the development server:
+2. **Run Development Servers:**
 ```bash
+# Terminal 1: Frontend
 npm run dev
+
+# Terminal 2: WebSocket Server
+npm run dev:server
+
+# Or both together:
+npm run dev:all
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+3. **Open:** http://localhost:3000
 
-### Building for Production
+## 🌐 Deployment Architecture
 
-```bash
-npm run build
-npm start
-```
+### Frontend (Vercel)
+- Next.js application
+- Static assets and API routes
+- Publicly accessible
+
+### WebSocket Server (Separate)
+- Real-time multiplayer server
+- Deploy to Railway, Render, or Fly.io
+- Handles player connections and game state sync
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 ## 🎯 Controls
 
@@ -81,7 +102,6 @@ npm start
 - **I** - Open/close inventory
 - **C** - Create character (when formless)
 - **ESC** - Close menus
-- **M** - Map (coming soon)
 
 ## 🏗️ Architecture
 
@@ -90,109 +110,22 @@ npm start
 ```
 tdadventure/
 ├── src/
-│   ├── components/
-│   │   ├── game/          # Game UI components
-│   │   │   ├── GameCanvas.tsx
-│   │   │   ├── GameUI.tsx
-│   │   │   ├── PlayerHUD.tsx
-│   │   │   ├── Minimap.tsx
-│   │   │   └── Chat.tsx
-│   │   └── ui/            # Menu components
-│   │       ├── MainMenu.tsx
-│   │       └── LoginForm.tsx
-│   ├── game/
-│   │   ├── core/          # Core game systems
-│   │   │   ├── GameEngine.ts
-│   │   │   ├── GameLoop.ts
-│   │   │   ├── SceneManager.ts
-│   │   │   └── World.ts
-│   │   ├── entities/      # Game entities
-│   │   │   ├── Player.ts
-│   │   │   ├── Enemy.ts
-│   │   │   └── NPC.ts
-│   │   ├── systems/       # Game systems
-│   │   │   ├── InputSystem.ts
-│   │   │   ├── MovementSystem.ts
-│   │   │   └── CollisionSystem.ts
-│   │   ├── network/       # Network client
-│   │   │   └── NetworkClient.ts
-│   │   └── utils/         # Utilities
-│   │       ├── Constants.ts
-│   │       └── Vector2.ts
-│   ├── pages/             # Next.js pages
-│   │   ├── index.tsx      # Main menu
-│   │   ├── game.tsx        # Game page
-│   │   └── api/           # API routes
-│   ├── store/             # State management
-│   │   └── gameStore.ts
-│   ├── types/             # TypeScript types
-│   │   ├── game.ts
-│   │   └── player.ts
-│   └── styles/            # Global styles
-│       └── globals.css
-└── package.json
+│   ├── components/        # React components
+│   ├── game/             # Game engine
+│   │   ├── core/         # Core systems
+│   │   ├── entities/     # Game entities
+│   │   ├── systems/      # Game systems
+│   │   └── network/      # Network client
+│   ├── pages/            # Next.js pages
+│   ├── services/         # Services (sprite generation)
+│   ├── store/            # State management
+│   └── types/            # TypeScript types
+├── server/               # WebSocket server
+└── public/               # Static assets
 ```
 
-### Key Systems
+## 🎨 AI Sprite Generation
 
-#### Game Engine
-The `GameEngine` class orchestrates all game systems:
-- Scene management (Three.js)
-- World generation and loading
-- Entity management
-- Input handling
-- Network synchronization
-- Game loop
-
-#### Entity System
-Entities (Player, Enemy, NPC) are managed through a unified interface:
-- Position and movement
-- Health and stats
-- Rendering meshes
-- Serialization for networking
-
-#### Network Client
-WebSocket-based client for multiplayer:
-- Player position sync
-- Entity updates
-- Chat messages
-- Automatic reconnection
-
-## 🌐 Multiplayer Setup
-
-For multiplayer functionality, you'll need to set up a WebSocket server. The client is configured to connect to:
-
-```
-ws://localhost:3001 (development)
-```
-
-### WebSocket Server Options
-
-1. **Socket.io** - Recommended for ease of use
-2. **ws library** - Lightweight WebSocket server
-3. **Vercel Edge Functions** - Serverless WebSocket support
-
-Example server setup (separate repository recommended):
-```javascript
-// websocket-server/index.js
-const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 3001 });
-
-wss.on('connection', (ws) => {
-  ws.on('message', (message) => {
-    // Broadcast to all clients
-    wss.clients.forEach((client) => {
-      if (client !== ws && client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  });
-});
-```
-
-## 🎨 Customization
-
-### AI Sprite Generation
 The game uses AI to generate character sprites based on:
 - **Class** (Assassin, Necromancer, Cleric, Wizard, Warrior)
 - **Race** (Human, Elf, Demon)
@@ -203,68 +136,15 @@ Sprites are automatically regenerated when you equip new items. For example, equ
 
 **Setup:**
 1. Get a Replicate API key from https://replicate.com
-2. Add `REPLICATE_API_KEY=your_key` to `.env.local`
+2. Add `REPLICATE_API_KEY=your_key` to `.env.local` (local) or Vercel environment variables (production)
 3. Sprites will be generated automatically when characters are created
 
 **Without API Key:**
 The game will use placeholder sprites (colored squares) that still function correctly.
 
-### World Generation
-Edit `src/game/core/World.ts` to customize:
-- Tile types and colors
-- Zone sizes
-- Spawn points
-- Terrain generation
-
-### Game Constants
-Modify `src/game/utils/Constants.ts` for:
-- Player speed
-- World size
-- Camera settings
-- Network configuration
-
-### UI Styling
-TailwindCSS configuration in `tailwind.config.js`:
-- Color scheme
-- Fonts
-- Component styles
-
-## 🚧 Roadmap
-
-### Phase 1 (Current)
-- [x] Core game engine
-- [x] Player movement and rendering
-- [x] World generation
-- [x] Basic UI (HUD, minimap, chat)
-- [x] WebSocket client
-
-### Phase 2 (Next)
-- [ ] WebSocket server implementation
-- [ ] Inventory system
-- [ ] Equipment system
-- [ ] Quest system
-- [ ] Combat mechanics
-
-### Phase 3 (Future)
-- [ ] Guild system
-- [ ] PvP arenas
-- [ ] Dungeon instances
-- [ ] Crafting system
-- [ ] Trading system
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License - see LICENSE file for details.
 
 ## 🙏 Acknowledgments
 
@@ -272,10 +152,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Built with [Three.js](https://threejs.org/)
 - Powered by [Next.js](https://nextjs.org/)
 - Deployed on [Vercel](https://vercel.com/)
-
-## 📧 Contact
-
-For questions or suggestions, please open an issue on GitHub.
 
 ---
 
