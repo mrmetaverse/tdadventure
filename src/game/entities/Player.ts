@@ -30,16 +30,17 @@ export class Player implements PlayerType {
   isLocal: boolean;
   mesh?: THREE.Group;
   
-  // Character data
-  class: CharacterClass;
-  race: CharacterRace;
-  divine: Divine;
-  alignment: Alignment;
+  // Character data (optional - formless if not set)
+  class?: CharacterClass;
+  race?: CharacterRace;
+  divine?: Divine;
+  alignment?: Alignment;
+  isFormless: boolean = false;
 
   constructor(
     name: string,
     position: Vector2,
-    characterData: {
+    characterData?: {
       class: CharacterClass;
       race: CharacterRace;
       divine: Divine;
@@ -54,12 +55,47 @@ export class Player implements PlayerType {
     this.position = position;
     this.velocity = { x: 0, y: 0 };
     this.rotation = 0;
+    this.isLocal = isLocal;
+    
+    // Check if formless (no character data)
+    if (!characterData) {
+      this.isFormless = true;
+      this.level = 0;
+      this.experience = 0;
+      this.experienceToLevel = 0;
+      this.speed = GAME_CONFIG.PLAYER_SPEED;
+      this.size = GAME_CONFIG.PLAYER_SIZE * 0.8; // Slightly smaller
+      
+      // Formless stats - minimal
+      this.stats = {
+        strength: 0,
+        dexterity: 0,
+        intelligence: 0,
+        vitality: 0,
+        attackDamage: 0,
+        defense: 0,
+        critChance: 0,
+        critDamage: 1.0,
+      };
+      
+      this.maxHealth = 1;
+      this.health = 1;
+      this.maxMana = 0;
+      this.mana = 0;
+      this.inventory = [];
+      this.equipment = {};
+      
+      this.createFormlessMesh();
+      return;
+    }
+    
+    // Has character data - create full character
+    this.isFormless = false;
     this.level = characterData.level || 1;
     this.experience = characterData.experience || 0;
     this.experienceToLevel = getExperienceForLevel(this.level + 1);
     this.speed = GAME_CONFIG.PLAYER_SPEED;
     this.size = GAME_CONFIG.PLAYER_SIZE;
-    this.isLocal = isLocal;
     
     // Set character data
     this.class = characterData.class;
@@ -125,6 +161,41 @@ export class Player implements PlayerType {
     this.createMesh();
   }
 
+  private createFormlessMesh(): void {
+    const group = new THREE.Group();
+
+    // Glowing ball of light
+    const glowGeometry = new THREE.SphereGeometry(this.size / 2, 16, 16);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8,
+      emissive: 0xffffff,
+      emissiveIntensity: 1.0,
+    });
+    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+    group.add(glow);
+
+    // Inner core
+    const coreGeometry = new THREE.SphereGeometry(this.size / 3, 12, 12);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffaa,
+      transparent: true,
+      opacity: 0.9,
+      emissive: 0xffffaa,
+      emissiveIntensity: 1.5,
+    });
+    const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    group.add(core);
+
+    // Pulsing animation
+    glow.userData.pulse = true;
+    core.userData.pulse = true;
+
+    group.name = `formless_player_${this.id}`;
+    this.mesh = group;
+  }
+
   private createMesh(): void {
     const group = new THREE.Group();
 
@@ -172,22 +243,35 @@ export class Player implements PlayerType {
   }
 
   update(deltaTime: number): void {
-    // Update health bar
     if (this.mesh) {
-      const healthBar = this.mesh.getObjectByName('healthBar') as THREE.Mesh;
-      if (healthBar) {
-        const healthPercent = this.health / this.maxHealth;
-        healthBar.scale.x = healthPercent;
-        healthBar.position.x = (-this.size / 2) * (1 - healthPercent);
-      }
-
       // Update position
       this.mesh.position.set(this.position.x, 0, this.position.y);
       
-      // Update rotation (rotate the arrow indicator)
-      const arrow = this.mesh.children[1];
-      if (arrow) {
-        arrow.rotation.z = this.rotation;
+      if (this.isFormless) {
+        // Animate formless glow
+        const time = Date.now() * 0.001;
+        this.mesh.children.forEach((child) => {
+          if (child.userData.pulse) {
+            const scale = 1 + Math.sin(time * 2) * 0.1;
+            child.scale.set(scale, scale, scale);
+          }
+        });
+        // Rotate slowly
+        this.mesh.rotation.y += deltaTime * 0.5;
+      } else {
+        // Update health bar
+        const healthBar = this.mesh.getObjectByName('healthBar') as THREE.Mesh;
+        if (healthBar) {
+          const healthPercent = this.health / this.maxHealth;
+          healthBar.scale.x = healthPercent;
+          healthBar.position.x = (-this.size / 2) * (1 - healthPercent);
+        }
+        
+        // Update rotation (rotate the arrow indicator)
+        const arrow = this.mesh.children[1];
+        if (arrow) {
+          arrow.rotation.z = this.rotation;
+        }
       }
     }
   }
@@ -257,11 +341,89 @@ export class Player implements PlayerType {
   }
 
   adjustAlignment(lawfulChange: number, goodChange: number): void {
+    if (!this.alignment) return;
     this.alignment = AlignmentSystem.adjustAlignment(this.alignment, lawfulChange, goodChange);
   }
 
   getAlignmentName(): string {
+    if (!this.alignment) return 'Formless';
     return AlignmentSystem.getAlignmentName(this.alignment);
+  }
+
+  // Transform from formless to character
+  transformToCharacter(characterData: {
+    class: CharacterClass;
+    race: CharacterRace;
+    divine: Divine;
+    alignment: Alignment;
+    name: string;
+  }): void {
+    if (!this.isFormless) return;
+
+    this.isFormless = false;
+    this.name = characterData.name;
+    this.class = characterData.class;
+    this.race = characterData.race;
+    this.divine = characterData.divine;
+    this.alignment = { ...characterData.alignment };
+    this.level = 1;
+    this.experience = 0;
+    this.experienceToLevel = getExperienceForLevel(2);
+
+    // Calculate stats
+    const classData = getClassData(characterData.class);
+    const raceData = getRaceData(characterData.race);
+    const divineData = getDivineData(characterData.divine);
+
+    this.stats = {
+      strength: classData.baseStats.strength || 10,
+      dexterity: classData.baseStats.dexterity || 10,
+      intelligence: classData.baseStats.intelligence || 10,
+      vitality: classData.baseStats.vitality || 10,
+      attackDamage: classData.baseStats.attackDamage || 15,
+      defense: classData.baseStats.defense || 5,
+      critChance: classData.baseStats.critChance || 0.05,
+      critDamage: classData.baseStats.critDamage || 1.5,
+    };
+
+    // Apply bonuses
+    if (raceData.statBonuses.strength) this.stats.strength += raceData.statBonuses.strength;
+    if (raceData.statBonuses.dexterity) this.stats.dexterity += raceData.statBonuses.dexterity;
+    if (raceData.statBonuses.intelligence) this.stats.intelligence += raceData.statBonuses.intelligence;
+    if (raceData.statBonuses.vitality) this.stats.vitality += raceData.statBonuses.vitality;
+    if (raceData.statBonuses.defense) this.stats.defense += raceData.statBonuses.defense || 0;
+
+    if (divineData.bonuses.strength) this.stats.strength += divineData.bonuses.strength;
+    if (divineData.bonuses.dexterity) this.stats.dexterity += divineData.bonuses.dexterity;
+    if (divineData.bonuses.intelligence) this.stats.intelligence += divineData.bonuses.intelligence;
+    if (divineData.bonuses.vitality) this.stats.vitality += divineData.bonuses.vitality;
+    if (divineData.bonuses.attackDamage) this.stats.attackDamage += divineData.bonuses.attackDamage || 0;
+    if (divineData.bonuses.defense) this.stats.defense += divineData.bonuses.defense || 0;
+    if (divineData.bonuses.critChance) this.stats.critChance += divineData.bonuses.critChance || 0;
+    if (divineData.bonuses.critDamage) this.stats.critDamage += divineData.bonuses.critDamage || 0;
+
+    this.maxHealth = 100 + this.stats.vitality * 10;
+    this.health = this.maxHealth;
+    this.maxMana = 50 + this.stats.intelligence * 5;
+    this.mana = this.maxMana;
+    this.size = GAME_CONFIG.PLAYER_SIZE;
+
+    // Replace mesh
+    if (this.mesh) {
+      // Dispose old mesh
+      this.mesh.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+    }
+
+    this.createMesh();
   }
 
   addItem(item: InventoryItem): void {

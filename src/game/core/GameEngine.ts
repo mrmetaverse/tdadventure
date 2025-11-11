@@ -64,7 +64,7 @@ export class GameEngine {
     this.collisionSystem.setZone(defaultZone);
     this.gameState.currentZone = defaultZone.id;
 
-    // Create local player with character data or defaults
+    // Create local player - formless if no character data
     const spawnPoint = defaultZone.spawnPoints[0];
     if (characterData) {
       this.localPlayer = new PlayerEntity(
@@ -81,18 +81,11 @@ export class GameEngine {
         true
       );
     } else {
-      // Default character for testing
+      // Formless player - ball of light
       this.localPlayer = new PlayerEntity(
-        'Player',
+        'Formless',
         spawnPoint,
-        {
-          class: 'warrior',
-          race: 'human',
-          divine: 'fire',
-          alignment: AlignmentSystem.getStartingAlignment('neutral', 'neutral'),
-          level: 1,
-          experience: 0,
-        },
+        undefined, // No character data = formless
         true
       );
     }

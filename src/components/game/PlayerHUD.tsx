@@ -17,6 +17,9 @@ const PlayerHUD: React.FC = () => {
 
   if (!player) return null;
 
+  // Don't show HUD for formless players
+  if (player.isFormless) return null;
+
   return (
     <div className="fixed bottom-4 left-4 z-50 pointer-events-auto">
       <div className="bg-game-panel border-2 border-game-border rounded-lg p-4 min-w-[300px] shadow-2xl">
