@@ -1,5 +1,5 @@
-import { CharacterClass, CharacterRace, Divine } from '@types/character';
-import { Equipment } from '@types/game';
+import { CharacterClass, CharacterRace, Divine } from '../types/character';
+import { Equipment } from '../types/game';
 
 interface SpriteGenerationOptions {
   class: CharacterClass;
@@ -227,7 +227,7 @@ export class SpriteGenerator {
    * Generate all animation frames for a character
    */
   async generateAnimationFrames(
-    class: CharacterClass,
+    characterClass: CharacterClass,
     race: CharacterRace,
     divine: Divine,
     equipment: Equipment | undefined,
@@ -238,7 +238,7 @@ export class SpriteGenerator {
     
     for (let frame = 1; frame <= frameCount; frame++) {
       const result = await this.generateSprite({
-        class,
+        class: characterClass,
         race,
         divine,
         equipment,
@@ -256,7 +256,7 @@ export class SpriteGenerator {
    * Regenerate sprites when equipment changes
    */
   async regenerateWithEquipment(
-    class: CharacterClass,
+    characterClass: CharacterClass,
     race: CharacterRace,
     divine: Divine,
     oldEquipment: Equipment | undefined,
@@ -264,10 +264,10 @@ export class SpriteGenerator {
     animationType: 'idle' | 'walk' | 'attack' = 'idle'
   ): Promise<string[]> {
     // Clear cache for this character's sprites
-    this.clearCacheForCharacter(class, race, divine);
+    this.clearCacheForCharacter(characterClass, race, divine);
     
     // Generate new frames with new equipment
-    return this.generateAnimationFrames(class, race, divine, newEquipment, animationType);
+    return this.generateAnimationFrames(characterClass, race, divine, newEquipment, animationType);
   }
 
   private getCacheKey(options: SpriteGenerationOptions): string {
@@ -277,10 +277,10 @@ export class SpriteGenerator {
     return `${options.class}-${options.race}-${options.divine}-${options.animationType}-${options.frame}-${equipKey}`;
   }
 
-  private clearCacheForCharacter(class: CharacterClass, race: CharacterRace, divine: Divine): void {
+  private clearCacheForCharacter(characterClass: CharacterClass, race: CharacterRace, divine: Divine): void {
     const keysToDelete: string[] = [];
     this.cache.forEach((_, key) => {
-      if (key.startsWith(`${class}-${race}-${divine}-`)) {
+      if (key.startsWith(`${characterClass}-${race}-${divine}-`)) {
         keysToDelete.push(key);
       }
     });

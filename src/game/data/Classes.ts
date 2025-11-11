@@ -1,4 +1,4 @@
-import { ClassData } from '@types/character';
+import { ClassData } from '../../types/character';
 
 export const CLASSES: Record<string, ClassData> = {
   assassin: {
@@ -142,5 +142,5 @@ export function getClassData(classId: CharacterClass): ClassData {
   return CLASSES[classId];
 }
 
-import { CharacterClass } from '@types/character';
+import { CharacterClass } from '../../types/character';
 

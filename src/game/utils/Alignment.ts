@@ -1,4 +1,4 @@
-import { Alignment, AlignmentAxis, MoralityAxis } from '@types/character';
+import { Alignment, AlignmentAxis, MoralityAxis } from '../../types/character';
 
 export class AlignmentSystem {
   static getAlignmentFromValues(lawfulValue: number, goodValue: number): Alignment {

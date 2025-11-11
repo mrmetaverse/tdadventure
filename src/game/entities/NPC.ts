@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { NPC as NPCType, Vector2 } from '@types/game';
+import { NPC as NPCType, Vector2 } from '../../types/game';
 import { GAME_CONFIG, COLORS } from '../utils/Constants';
 import { v4 as uuidv4 } from 'uuid';
 

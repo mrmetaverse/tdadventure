@@ -1,4 +1,4 @@
-import { NetworkMessage, Vector2 } from '@types/game';
+import { NetworkMessage, Vector2 } from '../../types/game';
 import { NETWORK } from '../utils/Constants';
 
 export class NetworkClient {
@@ -127,7 +127,7 @@ export class NetworkClient {
     }
 
     const fullMessage: NetworkMessage = {
-      type: message.type || 'unknown',
+      type: message.type || 'player_move',
       data: message.data || {},
       timestamp: message.timestamp || Date.now(),
       playerId: this.playerId || undefined,

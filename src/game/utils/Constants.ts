@@ -1,4 +1,4 @@
-import { TileData } from '@types/game';
+import { TileData } from '../../types/game';
 
 // Game Constants
 export const GAME_CONFIG = {

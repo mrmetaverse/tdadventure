@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GameState, Entity, Player, Vector2 } from '@types/game';
+import { GameState, Entity, Player, Vector2 } from '../../types/game';
 import { SceneManager } from './SceneManager';
 import { World } from './World';
 import { InputSystem } from '../systems/InputSystem';
@@ -238,11 +238,14 @@ export class GameEngine {
       } else if (entity.type === 'npc') {
         const npc = entity as NPC;
         npc.update(deltaTime);
-      } else if (entity.type === 'player' && !entity.isLocal) {
-        // Remote players
-        this.movementSystem.updateEntity(entity, deltaTime);
-        if (entity.mesh) {
-          entity.mesh.position.set(entity.position.x, 0, entity.position.y);
+      } else if (entity.type === 'player') {
+        const player = entity as Player;
+        if (!player.isLocal) {
+          // Remote players
+          this.movementSystem.updateEntity(entity, deltaTime);
+          if (entity.mesh) {
+            entity.mesh.position.set(entity.position.x, 0, entity.position.y);
+          }
         }
       }
     });

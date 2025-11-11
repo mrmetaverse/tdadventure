@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Zone, Vector2 } from '@types/game';
+import { Zone, Vector2 } from '../../types/game';
 import { TILE_TYPES, GAME_CONFIG } from '../utils/Constants';
 
 export class World {

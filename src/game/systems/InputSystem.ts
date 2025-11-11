@@ -1,4 +1,4 @@
-import { InputState, Vector2 } from '@types/game';
+import { InputState, Vector2 } from '../../types/game';
 import { INPUT_KEYS } from '../utils/Constants';
 
 export class InputSystem {

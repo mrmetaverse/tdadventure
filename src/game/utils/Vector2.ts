@@ -1,4 +1,4 @@
-import { Vector2 as Vec2 } from '@types/game';
+import { Vector2 as Vec2 } from '../../types/game';
 
 export class Vector2 implements Vec2 {
   constructor(public x: number = 0, public y: number = 0) {}

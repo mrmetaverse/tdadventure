@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CharacterCreationData, CharacterClass, CharacterRace, Divine, AlignmentAxis, MoralityAxis } from '@types/character';
+import { CharacterCreationData, CharacterClass, CharacterRace, Divine, AlignmentAxis, MoralityAxis } from '../../types/character';
 import { CLASSES, getClassData } from '../../game/data/Classes';
 import { RACES, getRaceData } from '../../game/data/Races';
 import { DIVINES, getDivineData } from '../../game/data/Divines';

@@ -1,4 +1,4 @@
-import { Entity, Vector2 } from '@types/game';
+import { Entity, Vector2 } from '../../types/game';
 import { CollisionSystem } from './CollisionSystem';
 import { Vector2 as Vec2 } from '../utils/Vector2';
 

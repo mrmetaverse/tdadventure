@@ -1,5 +1,4 @@
-import { RaceData } from '@types/character';
-import { CharacterRace } from '@types/character';
+import { RaceData, CharacterRace } from '../../types/character';
 
 export const RACES: Record<string, RaceData> = {
   human: {

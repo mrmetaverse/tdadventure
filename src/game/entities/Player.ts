@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { Player as PlayerType, Vector2, PlayerStats, Equipment, InventoryItem } from '@types/game';
-import { CharacterClass, CharacterRace, Divine, Alignment } from '@types/character';
+import { Player as PlayerType, Vector2, PlayerStats, Equipment, InventoryItem, Entity } from '../../types/game';
+import { CharacterClass, CharacterRace, Divine, Alignment } from '../../types/character';
 import { GAME_CONFIG, COLORS, getExperienceForLevel } from '../utils/Constants';
 import { getClassData } from '../data/Classes';
 import { getRaceData } from '../data/Races';
@@ -43,7 +43,7 @@ export class Player implements PlayerType {
   attackRange: number = 1.5;
   
   // Sprite system
-  private spriteSystem: SpriteSystem;
+  private spriteSystem?: SpriteSystem;
   private spriteAnimation?: SpriteAnimation;
   private currentAnimation: 'idle' | 'walk' | 'attack' = 'idle';
   private animationFrame: number = 0;
@@ -190,12 +190,18 @@ export class Player implements PlayerType {
     
     this.isGeneratingSprites = true;
     
+    if (!this.spriteSystem) {
+      this.spriteSystem = new SpriteSystem();
+    }
+    if (!this.class || !this.race || !this.divine) {
+      return;
+    }
     try {
       // Generate sprites
       this.spriteAnimation = await this.spriteSystem.getCharacterSprites(
-        this.class,
-        this.race,
-        this.divine,
+        this.class as CharacterClass,
+        this.race as CharacterRace,
+        this.divine as Divine,
         this.equipment
       );
       
@@ -280,8 +286,6 @@ export class Player implements PlayerType {
       color: 0xffffff,
       transparent: true,
       opacity: 0.8,
-      emissive: 0xffffff,
-      emissiveIntensity: 1.0,
     });
     const glow = new THREE.Mesh(glowGeometry, glowMaterial);
     group.add(glow);
@@ -292,8 +296,6 @@ export class Player implements PlayerType {
       color: 0xffffaa,
       transparent: true,
       opacity: 0.9,
-      emissive: 0xffffaa,
-      emissiveIntensity: 1.5,
     });
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
     group.add(core);
@@ -428,6 +430,7 @@ export class Player implements PlayerType {
         this.animationFrame = (this.animationFrame + 1) % frames.length;
         
         // Update texture
+        if (!this.spriteSystem) return;
         this.spriteSystem.loadTexture(frames[this.animationFrame]).then((texture) => {
           if (this.spriteMesh && this.spriteMesh.material instanceof THREE.MeshBasicMaterial) {
             if (this.spriteMesh.material.map) {
@@ -524,7 +527,8 @@ export class Player implements PlayerType {
     this.experienceToLevel = getExperienceForLevel(this.level + 1);
 
     // Increase stats based on class growth
-    const classData = getClassData(this.class);
+    if (!this.class) return;
+    const classData = getClassData(this.class as CharacterClass);
     if (classData.statGrowth.strength) this.stats.strength += classData.statGrowth.strength;
     if (classData.statGrowth.dexterity) this.stats.dexterity += classData.statGrowth.dexterity;
     if (classData.statGrowth.intelligence) this.stats.intelligence += classData.statGrowth.intelligence;
@@ -622,10 +626,11 @@ export class Player implements PlayerType {
     this.size = GAME_CONFIG.PLAYER_SIZE;
 
     // Replace mesh - need to remove old and add new to scene
+    let meshParent: THREE.Object3D | null = null;
     if (this.mesh && this.mesh.parent) {
       // Remove from parent
-      const parent = this.mesh.parent;
-      parent.remove(this.mesh);
+      meshParent = this.mesh.parent;
+      meshParent.remove(this.mesh);
       
       // Dispose old mesh
       this.mesh.traverse((child) => {
@@ -647,8 +652,8 @@ export class Player implements PlayerType {
     this.loadSprites();
     
     // Add new mesh to scene if we had a parent
-    if (this.mesh && this.mesh.parent === null && parent) {
-      parent.add(this.mesh);
+    if (this.mesh && this.mesh.parent === null && meshParent) {
+      meshParent.add(this.mesh);
     }
   }
 
@@ -670,11 +675,14 @@ export class Player implements PlayerType {
     
     // Regenerate sprites with new equipment
     if (!this.isFormless && this.class && this.race && this.divine) {
+      if (!this.spriteSystem) {
+        this.spriteSystem = new SpriteSystem();
+      }
       try {
         this.spriteAnimation = await this.spriteSystem.regenerateWithEquipment(
-          this.class,
-          this.race,
-          this.divine,
+          this.class as CharacterClass,
+          this.race as CharacterRace,
+          this.divine as Divine,
           oldEquipment,
           this.equipment
         );
@@ -721,11 +729,14 @@ export class Player implements PlayerType {
     
     // Regenerate sprites without equipment
     if (!this.isFormless && this.class && this.race && this.divine) {
+      if (!this.spriteSystem) {
+        this.spriteSystem = new SpriteSystem();
+      }
       try {
         this.spriteAnimation = await this.spriteSystem.regenerateWithEquipment(
-          this.class,
-          this.race,
-          this.divine,
+          this.class as CharacterClass,
+          this.race as CharacterRace,
+          this.divine as Divine,
           oldEquipment,
           this.equipment
         );

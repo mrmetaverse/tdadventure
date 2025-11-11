@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CharacterData } from '@types/character';
+import { CharacterData } from '../../types/character';
 import { useRouter } from 'next/router';
 import CharacterCreation from './CharacterCreation';
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CharacterData, CharacterCreationData } from '@types/character';
+import { CharacterData, CharacterCreationData } from '../types/character';
 import { v4 as uuidv4 } from 'uuid';
 
 interface CharacterStore {

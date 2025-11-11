@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { InventoryItem, Equipment } from '@types/game';
+import { InventoryItem, Equipment } from '../../types/game';
 import { Player } from '../../game/entities/Player';
 
 interface InventoryProps {

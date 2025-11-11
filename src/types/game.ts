@@ -36,6 +36,7 @@ export interface Player extends Entity {
   race?: string;
   divine?: string;
   alignment?: any;
+  isFormless?: boolean;
 }
 
 export interface PlayerStats {
@@ -120,7 +121,7 @@ export interface Zone {
 }
 
 export interface NetworkMessage {
-  type: 'player_move' | 'player_attack' | 'entity_update' | 'entity_spawn' | 'entity_despawn' | 'chat' | 'zone_change';
+  type: 'player_move' | 'player_attack' | 'player_update' | 'entity_update' | 'entity_spawn' | 'entity_despawn' | 'chat' | 'zone_change' | 'ping' | 'pong' | 'connected' | 'world_state' | 'player_joined' | 'player_left' | 'character_created';
   data: any;
   timestamp: number;
   playerId?: string;

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Player, Entity } from '@types/game';
+import { Player, Entity } from '../types/game';
 
 interface GameStore {
   player: Player | null;

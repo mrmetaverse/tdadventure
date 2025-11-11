@@ -5,7 +5,7 @@ import { useCharacterStore } from '../store/characterStore';
 import { GameEngine } from '../game/core/GameEngine';
 import InGameCharacterCreation from '../components/game/InGameCharacterCreation';
 import Inventory from '../components/game/Inventory';
-import { CharacterCreationData } from '@types/character';
+import { CharacterCreationData } from '../types/character';
 
 const GamePage: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

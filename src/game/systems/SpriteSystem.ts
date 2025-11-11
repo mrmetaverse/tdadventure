@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { CharacterClass, CharacterRace, Divine } from '@types/character';
-import { Equipment } from '@types/game';
+import { CharacterClass, CharacterRace, Divine } from '../../types/character';
+import { Equipment } from '../../types/game';
 import { spriteGenerator } from '../../services/spriteGenerator';
 
 export interface SpriteAnimation {
@@ -17,12 +17,12 @@ export class SpriteSystem {
    * Get or generate sprites for a character
    */
   async getCharacterSprites(
-    class: CharacterClass,
+    characterClass: CharacterClass,
     race: CharacterRace,
     divine: Divine,
     equipment?: Equipment
   ): Promise<SpriteAnimation> {
-    const cacheKey = this.getCacheKey(class, race, divine, equipment);
+    const cacheKey = this.getCacheKey(characterClass, race, divine, equipment);
     
     if (this.spriteCache.has(cacheKey)) {
       return this.spriteCache.get(cacheKey)!;
@@ -30,9 +30,9 @@ export class SpriteSystem {
 
     // Generate all animation frames
     const [idleFrames, walkFrames, attackFrames] = await Promise.all([
-      spriteGenerator.generateAnimationFrames(class, race, divine, equipment, 'idle', 4),
-      spriteGenerator.generateAnimationFrames(class, race, divine, equipment, 'walk', 4),
-      spriteGenerator.generateAnimationFrames(class, race, divine, equipment, 'attack', 4),
+      spriteGenerator.generateAnimationFrames(characterClass, race, divine, equipment, 'idle', 4),
+      spriteGenerator.generateAnimationFrames(characterClass, race, divine, equipment, 'walk', 4),
+      spriteGenerator.generateAnimationFrames(characterClass, race, divine, equipment, 'attack', 4),
     ]);
 
     const animation: SpriteAnimation = {
@@ -90,22 +90,22 @@ export class SpriteSystem {
    * Regenerate sprites when equipment changes
    */
   async regenerateWithEquipment(
-    class: CharacterClass,
+    characterClass: CharacterClass,
     race: CharacterRace,
     divine: Divine,
     oldEquipment: Equipment | undefined,
     newEquipment: Equipment
   ): Promise<SpriteAnimation> {
     // Clear old cache
-    const oldKey = this.getCacheKey(class, race, divine, oldEquipment);
+    const oldKey = this.getCacheKey(characterClass, race, divine, oldEquipment);
     this.spriteCache.delete(oldKey);
 
     // Generate new sprites
-    return this.getCharacterSprites(class, race, divine, newEquipment);
+    return this.getCharacterSprites(characterClass, race, divine, newEquipment);
   }
 
   private getCacheKey(
-    class: CharacterClass,
+    characterClass: CharacterClass,
     race: CharacterRace,
     divine: Divine,
     equipment?: Equipment
@@ -113,7 +113,7 @@ export class SpriteSystem {
     const equipKey = equipment
       ? `${equipment.weapon?.id || 'none'}-${equipment.armor?.id || 'none'}-${equipment.helmet?.id || 'none'}`
       : 'none';
-    return `${class}-${race}-${divine}-${equipKey}`;
+    return `${characterClass}-${race}-${divine}-${equipKey}`;
   }
 
   /**

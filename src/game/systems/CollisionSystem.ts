@@ -1,4 +1,4 @@
-import { Entity, Vector2, Zone } from '@types/game';
+import { Entity, Vector2, Zone } from '../../types/game';
 import { TILE_TYPES } from '../utils/Constants';
 import { Vector2 as Vec2 } from '../utils/Vector2';
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { Vector2 } from '@types/game';
+import { Vector2, Player } from '../../types/game';
 
 const Minimap: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -47,7 +47,8 @@ const Minimap: React.FC = () => {
       const y = entity.position.y * scaleY;
 
       if (entity.type === 'player') {
-        ctx.fillStyle = entity.isLocal ? '#10b981' : '#3b82f6';
+        const player = entity as Player;
+        ctx.fillStyle = player.isLocal ? '#10b981' : '#3b82f6';
         ctx.beginPath();
         ctx.arc(x, y, 3, 0, Math.PI * 2);
         ctx.fill();

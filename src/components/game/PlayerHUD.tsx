@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
+import { AlignmentSystem } from '../../game/utils/Alignment';
 
 const PlayerHUD: React.FC = () => {
   const { player } = useGameStore();
@@ -40,7 +41,7 @@ const PlayerHUD: React.FC = () => {
           )}
           {player.alignment && (
             <div className="text-game-text text-xs opacity-60 mt-1">
-              Alignment: {player.getAlignmentName ? player.getAlignmentName() : 'Neutral'}
+              Alignment: {player.alignment ? AlignmentSystem.getAlignmentName(player.alignment) : 'Neutral'}
             </div>
           )}
         </div>

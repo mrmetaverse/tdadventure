@@ -1,5 +1,4 @@
-import { DivineData } from '@types/character';
-import { Divine } from '@types/character';
+import { DivineData, Divine } from '../../types/character';
 
 export const DIVINES: Record<string, DivineData> = {
   knowledge: {
