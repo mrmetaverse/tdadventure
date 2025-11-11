@@ -66,19 +66,43 @@ export class SpriteGenerator {
       const parts: string[] = [];
       if (equipment.weapon) {
         const weaponName = equipment.weapon.name.toLowerCase();
-        if (weaponName.includes('fire')) parts.push('flaming sword');
-        else if (weaponName.includes('ice')) parts.push('ice sword');
-        else if (weaponName.includes('lightning')) parts.push('lightning sword');
-        else parts.push('sword');
+        // Check for special effects in weapon name
+        if (weaponName.includes('fire') || weaponName.includes('flame')) {
+          parts.push('flaming sword with fire effects');
+        } else if (weaponName.includes('ice') || weaponName.includes('frost')) {
+          parts.push('ice sword with frost effects');
+        } else if (weaponName.includes('lightning') || weaponName.includes('thunder')) {
+          parts.push('lightning sword with electric effects');
+        } else if (weaponName.includes('poison')) {
+          parts.push('poisoned sword with toxic effects');
+        } else if (weaponName.includes('staff') || weaponName.includes('wand')) {
+          parts.push('staff');
+        } else {
+          parts.push('sword');
+        }
       }
       if (equipment.armor) {
         const armorName = equipment.armor.name.toLowerCase();
         if (armorName.includes('plate')) parts.push('plate armor');
         else if (armorName.includes('leather')) parts.push('leather armor');
+        else if (armorName.includes('chain')) parts.push('chainmail armor');
         else parts.push('armor');
       }
-      if (equipment.helmet) parts.push('helmet');
-      if (equipment.boots) parts.push('boots');
+      if (equipment.helmet) {
+        const helmetName = equipment.helmet.name.toLowerCase();
+        if (helmetName.includes('crown')) parts.push('crown');
+        else if (helmetName.includes('hood')) parts.push('hood');
+        else parts.push('helmet');
+      }
+      if (equipment.boots) {
+        const bootsName = equipment.boots.name.toLowerCase();
+        if (bootsName.includes('boots')) parts.push('boots');
+        else if (bootsName.includes('sandals')) parts.push('sandals');
+        else parts.push('footwear');
+      }
+      if (equipment.accessory1 || equipment.accessory2) {
+        parts.push('accessories');
+      }
       if (parts.length > 0) {
         equipmentDesc = `, ${parts.join(', ')}`;
       }

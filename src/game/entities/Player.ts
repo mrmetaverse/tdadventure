@@ -652,6 +652,101 @@ export class Player implements PlayerType {
     }
   }
 
+  /**
+   * Equip an item and regenerate sprites
+   */
+  async equipItem(item: InventoryItem, slot: keyof Equipment): Promise<void> {
+    const oldEquipment = { ...this.equipment };
+    this.equipment[slot] = item;
+    
+    // Apply item stats
+    if (item.stats) {
+      Object.entries(item.stats).forEach(([key, value]) => {
+        if (value && this.stats[key as keyof PlayerStats] !== undefined) {
+          this.stats[key as keyof PlayerStats] += value;
+        }
+      });
+    }
+    
+    // Regenerate sprites with new equipment
+    if (!this.isFormless && this.class && this.race && this.divine) {
+      try {
+        this.spriteAnimation = await this.spriteSystem.regenerateWithEquipment(
+          this.class,
+          this.race,
+          this.divine,
+          oldEquipment,
+          this.equipment
+        );
+        
+        // Update current sprite
+        if (this.spriteAnimation && this.spriteAnimation.idle.length > 0) {
+          const texture = await this.spriteSystem.loadTexture(this.spriteAnimation.idle[this.animationFrame]);
+          if (this.spriteMesh && this.spriteMesh.material instanceof THREE.MeshBasicMaterial) {
+            if (this.spriteMesh.material.map) {
+              this.spriteMesh.material.map.dispose();
+            }
+            this.spriteMesh.material.map = texture;
+            this.spriteMesh.material.needsUpdate = true;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to regenerate sprites:', error);
+      }
+    }
+  }
+
+  /**
+   * Unequip an item and regenerate sprites
+   */
+  async unequipItem(slot: keyof Equipment): Promise<void> {
+    const oldEquipment = { ...this.equipment };
+    const item = this.equipment[slot];
+    
+    if (item) {
+      // Remove item stats
+      if (item.stats) {
+        Object.entries(item.stats).forEach(([key, value]) => {
+          if (value && this.stats[key as keyof PlayerStats] !== undefined) {
+            this.stats[key as keyof PlayerStats] -= value;
+          }
+        });
+      }
+      
+      // Return item to inventory
+      this.addItem(item);
+    }
+    
+    delete this.equipment[slot];
+    
+    // Regenerate sprites without equipment
+    if (!this.isFormless && this.class && this.race && this.divine) {
+      try {
+        this.spriteAnimation = await this.spriteSystem.regenerateWithEquipment(
+          this.class,
+          this.race,
+          this.divine,
+          oldEquipment,
+          this.equipment
+        );
+        
+        // Update current sprite
+        if (this.spriteAnimation && this.spriteAnimation.idle.length > 0) {
+          const texture = await this.spriteSystem.loadTexture(this.spriteAnimation.idle[this.animationFrame]);
+          if (this.spriteMesh && this.spriteMesh.material instanceof THREE.MeshBasicMaterial) {
+            if (this.spriteMesh.material.map) {
+              this.spriteMesh.material.map.dispose();
+            }
+            this.spriteMesh.material.map = texture;
+            this.spriteMesh.material.needsUpdate = true;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to regenerate sprites:', error);
+      }
+    }
+  }
+
   addItem(item: InventoryItem): void {
     const existingItem = this.inventory.find((i) => i.id === item.id);
     if (existingItem) {

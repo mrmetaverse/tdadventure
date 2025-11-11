@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { InventoryItem, Equipment } from '@types/game';
+import { Player } from '../../game/entities/Player';
 
 interface InventoryProps {
   isOpen: boolean;
@@ -13,6 +14,9 @@ const Inventory: React.FC<InventoryProps> = ({ isOpen, onClose }) => {
   const [draggedFrom, setDraggedFrom] = useState<{ type: 'inventory' | 'equipment'; index?: number; slot?: string } | null>(null);
 
   if (!isOpen || !player) return null;
+  
+  // Cast player to Player entity to access methods
+  const playerEntity = player as unknown as Player;
 
   const inventorySize = 30; // 6x5 grid
   const inventorySlots: (InventoryItem | null)[] = Array(inventorySize).fill(null);
@@ -43,12 +47,31 @@ const Inventory: React.FC<InventoryProps> = ({ isOpen, onClose }) => {
     setDraggedFrom(null);
   };
 
-  const handleDrop = (to: { type: 'inventory' | 'equipment'; index?: number; slot?: string }) => {
+  const handleDrop = async (to: { type: 'inventory' | 'equipment'; index?: number; slot?: string }) => {
     if (!draggedItem || !draggedFrom) return;
 
-    // TODO: Implement item movement logic
-    // This would update the player's inventory and equipment
-    console.log('Move item from', draggedFrom, 'to', to);
+    // Handle equipment
+    if (to.type === 'equipment' && to.slot && playerEntity.equipItem) {
+      const slot = to.slot as keyof Equipment;
+      if (draggedItem.type === 'weapon' && slot === 'weapon') {
+        await playerEntity.equipItem(draggedItem, 'weapon');
+        if (draggedFrom.type === 'inventory' && draggedFrom.index !== undefined) {
+          playerEntity.removeItem(draggedItem.id, 1);
+        }
+      } else if (draggedItem.type === 'armor') {
+        if (slot === 'armor' || slot === 'helmet' || slot === 'boots') {
+          await playerEntity.equipItem(draggedItem, slot);
+          if (draggedFrom.type === 'inventory' && draggedFrom.index !== undefined) {
+            playerEntity.removeItem(draggedItem.id, 1);
+          }
+        }
+      }
+    }
+    
+    // Handle unequip (drag from equipment to inventory)
+    if (draggedFrom.type === 'equipment' && draggedFrom.slot && to.type === 'inventory' && playerEntity.unequipItem) {
+      await playerEntity.unequipItem(draggedFrom.slot as keyof Equipment);
+    }
     
     handleDragEnd();
   };

@@ -11,12 +11,14 @@ A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. I
 
 ### Core Gameplay
 - **Top-down 2D perspective** with smooth camera controls
-- **WASD movement** with mouse interaction
+- **WASD movement** with mouse click to attack
 - **Real-time multiplayer** via WebSocket connections
 - **Persistent world** with dynamic zone loading
 - **Entity system** supporting players, NPCs, and enemies
 - **Combat system** with health, mana, and experience
-- **Inventory and equipment** system (coming soon)
+- **AI-generated character sprites** based on class, race, divine, and equipment
+- **Dynamic sprite regeneration** when equipping new items
+- **Inventory and equipment** system with drag-and-drop
 
 ### Technical Features
 - **Three.js** rendering with orthographic camera
@@ -34,12 +36,13 @@ A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. I
 - Node.js 18+ 
 - npm or yarn
 - Git
+- (Optional) Replicate API key for AI sprite generation
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/tdadventure.git
+git clone https://github.com/mrmetaverse/tdadventure.git
 cd tdadventure
 ```
 
@@ -48,12 +51,20 @@ cd tdadventure
 npm install
 ```
 
-3. Run the development server:
+3. (Optional) Set up AI sprite generation:
+   - Get a Replicate API key from https://replicate.com/account/api-tokens
+   - Create a `.env.local` file in the root directory:
+   ```bash
+   REPLICATE_API_KEY=your_api_key_here
+   ```
+   - Without an API key, the game will use placeholder sprites
+
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ### Building for Production
 
@@ -65,9 +76,11 @@ npm start
 ## 🎯 Controls
 
 - **WASD** - Move character
-- **Mouse** - Look/Attack direction
+- **Mouse Click** - Attack enemies
 - **Enter** - Open chat
-- **I** - Inventory (coming soon)
+- **I** - Open/close inventory
+- **C** - Create character (when formless)
+- **ESC** - Close menus
 - **M** - Map (coming soon)
 
 ## 🏗️ Architecture
@@ -178,6 +191,23 @@ wss.on('connection', (ws) => {
 ```
 
 ## 🎨 Customization
+
+### AI Sprite Generation
+The game uses AI to generate character sprites based on:
+- **Class** (Assassin, Necromancer, Cleric, Wizard, Warrior)
+- **Race** (Human, Elf, Demon)
+- **Divine** (Knowledge, Passion, Fire, Healing, Chaos, Hunt, Lightning, Poison, Water)
+- **Equipment** (weapons, armor, accessories)
+
+Sprites are automatically regenerated when you equip new items. For example, equipping a "Sword of Fire" will regenerate sprites showing the character with a flaming sword.
+
+**Setup:**
+1. Get a Replicate API key from https://replicate.com
+2. Add `REPLICATE_API_KEY=your_key` to `.env.local`
+3. Sprites will be generated automatically when characters are created
+
+**Without API Key:**
+The game will use placeholder sprites (colored squares) that still function correctly.
 
 ### World Generation
 Edit `src/game/core/World.ts` to customize:
