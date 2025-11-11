@@ -1,16 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { useRouter } from 'next/router';
-import GameCanvas from '../components/game/GameCanvas';
 import GameUI from '../components/game/GameUI';
 import { useGameStore } from '../store/gameStore';
 import { GameEngine } from '../game/core/GameEngine';
-import { Player } from '../game/entities/Player';
 
 const GamePage: React.FC = () => {
-  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
-  const { setPlayer, setConnected } = useGameStore();
+  const { setPlayer, setConnected, setEntities } = useGameStore();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -30,10 +26,8 @@ const GamePage: React.FC = () => {
         setPlayer(localPlayer);
       }
 
-      // Update entities in store
-      entities.forEach((entity) => {
-        // Entities are managed by engine, but we can sync for UI
-      });
+      // Update entities in store for UI (minimap, etc.)
+      setEntities(entities);
     }, 100);
 
     // Start the game
@@ -46,7 +40,7 @@ const GamePage: React.FC = () => {
       engine.dispose();
       setPlayer(null);
     };
-  }, [setPlayer, setConnected]);
+    }, [setPlayer, setConnected, setEntities]);
 
   return (
     <div className="game-container relative w-screen h-screen overflow-hidden">

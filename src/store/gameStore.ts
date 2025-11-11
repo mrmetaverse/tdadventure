@@ -6,6 +6,7 @@ interface GameStore {
   entities: Entity[];
   isConnected: boolean;
   setPlayer: (player: Player | null) => void;
+  setEntities: (entities: Entity[]) => void;
   addEntity: (entity: Entity) => void;
   removeEntity: (id: string) => void;
   updateEntity: (id: string, updates: Partial<Entity>) => void;
@@ -17,6 +18,7 @@ export const useGameStore = create<GameStore>((set) => ({
   entities: [],
   isConnected: false,
   setPlayer: (player) => set({ player }),
+  setEntities: (entities) => set({ entities }),
   addEntity: (entity) =>
     set((state) => ({
       entities: [...state.entities, entity],
