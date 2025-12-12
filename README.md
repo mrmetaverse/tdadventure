@@ -1,6 +1,6 @@
 # Topdown Adventure (TDAdventure)
 
-A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. Inspired by Diablo II and EverQuest, featuring real-time multiplayer gameplay, persistent worlds, and scalable architecture.
+A **top-down 2D MMORPG** built with **Three.js**, **Next.js**, and **Vercel**. Inspired by Diablo II and EverQuest, featuring real-time multiplayer gameplay, persistent worlds, and scalable architecture. incremental 
 
 ![Topdown Adventure](https://img.shields.io/badge/Status-Live%20%26%20Deployed-green)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
